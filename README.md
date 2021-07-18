@@ -17,6 +17,6 @@ $ cargo install decom
 Use multi-process model.
 
 ```
-[main] <-> [tui]
-[log collector] <-> [process: docker logs]
+[main (thread)] <-> [tui]
+[log collector (thread)] <-> [docker logs (process)]
 ```
