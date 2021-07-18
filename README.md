@@ -12,4 +12,11 @@ $ cargo install decom
 
 ## Development
 
-WIP
+### Architecture
+
+Use multi-process model.
+
+```
+[main] <-> [tui]
+[log collector] <-> [process: docker logs]
+```
