@@ -1,3 +1,4 @@
+use crossbeam::channel::{self, Receiver, Sender};
 use futures::prelude::*;
 use std::{
     error::Error,
@@ -18,6 +19,7 @@ struct LogCollectorInner {
     service_name: String,
     logs: Vec<String>,
     marker: usize,
+    channel: (Sender<usize>, Receiver<usize>),
 }
 
 impl LogCollector {
@@ -27,6 +29,7 @@ impl LogCollector {
                 service_name,
                 logs: Default::default(),
                 marker: 0,
+                channel: channel::unbounded(),
             })),
         }
     }
@@ -57,6 +60,7 @@ async fn collect_logs(inner: Arc<Mutex<LogCollectorInner>>) -> Result<(), Box<dy
     while let Some(line) = reader.next_line().await? {
         println!("collector: {}", line);
         inner.logs.push(line);
+        let _ = inner.channel.0.send(inner.logs.len());
     }
 
     Ok(())
@@ -69,14 +73,35 @@ impl Stream for LogCollector {
         self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Self::Item>> {
-        let inner = self.inner.lock().unwrap();
+        println!("collector: poll_next: enter");
+        let mut inner = self.inner.lock().unwrap();
 
-        let diff = inner.logs.len() - inner.marker;
+        println!("collector: poll_next: locked");
+        let len = inner.logs.len();
+        let diff = len - inner.marker;
         if diff == 0 {
-            cx.waker().wake_by_ref();
+            let receiver = inner.channel.1.clone();
+            std::mem::drop(inner);
+
+            let waker = cx.waker().clone();
+            thread::spawn(move || {
+                if let Ok(count) = receiver.recv() {
+                    println!("collector: poll_next: recv lines={}", count);
+                } else {
+                    println!("collector: poll_next: failed");
+                }
+                println!("collector: poll_next: wake");
+                waker.wake();
+            });
+
+            println!("collector: poll_next: pending");
             Poll::Pending
         } else {
-            Poll::Ready(Some((inner.logs.len(), diff)))
+            inner.marker = len;
+            std::mem::drop(inner);
+
+            println!("collector: poll_next: ready");
+            Poll::Ready(Some((len, diff)))
         }
     }
 }
