@@ -1,3 +1,4 @@
+use futures::StreamExt;
 use std::{error::Error, result::Result};
 use tokio::time::{sleep, Duration};
 
@@ -13,12 +14,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // let mapping = docker::names(ids).await?;
     // println!("ids: {:?}", mapping);
 
-    let collector = LogCollector::new("periodic-output".into());
+    let mut collector = LogCollector::new("periodic-output".into());
     collector.start();
-    println!("collector started");
+    println!("main: started");
+
+    while let Some((total, diff)) = collector.next().await {
+        println!("main: {} [+{}]", total, diff);
+    }
 
     loop {
-        println!("loop");
+        println!("main: loop");
         sleep(Duration::from_secs(60)).await;
     }
 
