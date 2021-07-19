@@ -4,7 +4,7 @@ use std::{
     process::Stdio,
     result::Result,
     sync::{Arc, Mutex},
-    task::{Poll, Waker},
+    task::Poll,
     thread,
 };
 use tokio::io::{AsyncBufReadExt, BufReader};
@@ -18,7 +18,6 @@ struct LogCollectorInner {
     service_name: String,
     logs: Vec<String>,
     marker: usize,
-    waker: Option<Waker>,
 }
 
 impl LogCollector {
@@ -28,7 +27,6 @@ impl LogCollector {
                 service_name,
                 logs: Default::default(),
                 marker: 0,
-                waker: None,
             })),
         }
     }
@@ -59,10 +57,6 @@ async fn collect_logs(inner: Arc<Mutex<LogCollectorInner>>) -> Result<(), Box<dy
     while let Some(line) = reader.next_line().await? {
         println!("collector: {}", line);
         inner.logs.push(line);
-
-        if let Some(waker) = inner.waker.clone() {
-            waker.wake();
-        }
     }
 
     Ok(())
@@ -75,11 +69,10 @@ impl Stream for LogCollector {
         self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Self::Item>> {
-        let mut inner = self.inner.lock().unwrap();
+        let inner = self.inner.lock().unwrap();
 
         let diff = inner.logs.len() - inner.marker;
         if diff == 0 {
-            // inner.waker.replace(cx.waker().clone());
             cx.waker().wake_by_ref();
             Poll::Pending
         } else {
