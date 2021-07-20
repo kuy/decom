@@ -1,40 +1,58 @@
 use crossbeam::channel::{self, Receiver, Sender};
 use futures::prelude::*;
+use std::sync::{Arc, Mutex};
 use std::{error::Error, process::Stdio, result::Result, task::Poll, thread};
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::{process::Command, runtime::Runtime};
 
 pub struct LogCollector {
     service_name: String,
-    count: usize,
     marker: usize,
-    channel: (Sender<usize>, Receiver<usize>),
+    notifier: (Sender<usize>, Receiver<usize>),
+    transfer: (Sender<String>, Receiver<String>),
+    logs: Arc<Mutex<Vec<String>>>,
 }
 
 impl LogCollector {
     pub fn new(service_name: String) -> Self {
         LogCollector {
-            channel: channel::unbounded(),
             service_name,
-            count: 0,
             marker: 0,
+            notifier: channel::unbounded(),
+            transfer: channel::unbounded(),
+            logs: Arc::new(Mutex::new(vec![])),
         }
     }
 
     pub fn start(&mut self) {
         let name = self.service_name.clone();
-        let sender = self.channel.0.clone();
+        let notifier = self.notifier.0.clone();
+        let transfer = self.transfer.0.clone();
         thread::spawn(move || {
-            println!("collector: thread spawn");
+            println!("collector: logs: spawn");
             let rt = Runtime::new().unwrap();
             rt.block_on(async {
-                println!("collector: enter block_on");
-                let _ = LogCollector::logs(name, sender).await;
+                println!("collector: logs: block_on");
+                LogCollector::logs(name, notifier, transfer).await;
             });
+        });
+        let logs = self.logs.clone();
+        let transfer = self.transfer.1.clone();
+        thread::spawn(move || {
+            println!("collector: collector: spawn");
+            while let Ok(line) = transfer.recv() {
+                let mut store = logs.lock().expect("failed to lock");
+                println!("collector: collector: recv");
+                store.push(line);
+            }
         });
     }
 
-    async fn logs(service_name: String, sender: Sender<usize>) -> Result<(), Box<dyn Error>> {
+    async fn logs(
+        service_name: String,
+        notifier: Sender<usize>,
+        transfer: Sender<String>,
+    ) -> Result<(), Box<dyn Error>> {
         let mut child = Command::new("docker")
             .args(&["logs", "-f", service_name.as_str()])
             .stdout(Stdio::piped())
@@ -45,12 +63,18 @@ impl LogCollector {
         let mut count = 0;
         while let Some(line) = reader.next_line().await? {
             println!("collector: {}", line);
-            // inner.logs.push(line);
+            transfer.send(line);
             count += 1;
-            let _ = sender.send(count);
+            notifier.send(count);
         }
 
         Ok(())
+    }
+
+    fn len(&self) -> usize {
+        let store = self.logs.lock().expect("failed to lock");
+        let count = store.len();
+        count
     }
 }
 
@@ -62,9 +86,10 @@ impl Stream for LogCollector {
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Self::Item>> {
         println!("collector: poll_next: enter");
-        let diff = self.count - self.marker;
+        let count = self.len();
+        let diff = count - self.marker;
         if diff == 0 {
-            let receiver = self.channel.1.clone();
+            let receiver = self.notifier.1.clone();
             let waker = cx.waker().clone();
             thread::spawn(move || {
                 if let Ok(count) = receiver.recv() {
@@ -79,10 +104,10 @@ impl Stream for LogCollector {
             println!("collector: poll_next: pending");
             Poll::Pending
         } else {
-            self.marker = self.count;
+            self.marker = count;
 
             println!("collector: poll_next: ready");
-            Poll::Ready(Some((self.count, diff)))
+            Poll::Ready(Some((count, diff)))
         }
     }
 }

@@ -4,7 +4,7 @@ Decompose [`docker-compose`](https://docs.docker.com/compose/reference/) logs an
 
 ## Usage
 
-### WIP: Installation
+### WIP: Install
 
 ```bash
 $ cargo install decom
