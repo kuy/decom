@@ -1,23 +1,12 @@
 use crossbeam::channel::{self, Receiver, Sender};
 use futures::prelude::*;
-use std::{
-    error::Error,
-    process::Stdio,
-    result::Result,
-    sync::{Arc, Mutex},
-    task::Poll,
-    thread,
-};
+use std::{error::Error, process::Stdio, result::Result, task::Poll, thread};
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::{process::Command, runtime::Runtime};
 
 pub struct LogCollector {
-    inner: Arc<Mutex<LogCollectorInner>>,
-}
-
-struct LogCollectorInner {
     service_name: String,
-    logs: Vec<String>,
+    count: usize,
     marker: usize,
     channel: (Sender<usize>, Receiver<usize>),
 }
@@ -25,64 +14,57 @@ struct LogCollectorInner {
 impl LogCollector {
     pub fn new(service_name: String) -> Self {
         LogCollector {
-            inner: Arc::new(Mutex::new(LogCollectorInner {
-                service_name,
-                logs: Default::default(),
-                marker: 0,
-                channel: channel::unbounded(),
-            })),
+            channel: channel::unbounded(),
+            service_name,
+            count: 0,
+            marker: 0,
         }
     }
 
     pub fn start(&mut self) {
-        let local = self.inner.clone();
+        let name = self.service_name.clone();
+        let sender = self.channel.0.clone();
         thread::spawn(move || {
             println!("collector: thread spawn");
             let rt = Runtime::new().unwrap();
             rt.block_on(async {
                 println!("collector: enter block_on");
-                let _ = collect_logs(local).await;
+                let _ = LogCollector::logs(name, sender).await;
             });
         });
     }
-}
 
-async fn collect_logs(inner: Arc<Mutex<LogCollectorInner>>) -> Result<(), Box<dyn Error>> {
-    let mut inner = inner.lock().unwrap();
+    async fn logs(service_name: String, sender: Sender<usize>) -> Result<(), Box<dyn Error>> {
+        let mut child = Command::new("docker")
+            .args(&["logs", "-f", service_name.as_str()])
+            .stdout(Stdio::piped())
+            .spawn()?;
+        let stdout = child.stdout.take().expect("failed to get child output");
+        let mut reader = BufReader::new(stdout).lines();
 
-    let mut child = Command::new("docker")
-        .args(&["logs", "-f", inner.service_name.as_str()])
-        .stdout(Stdio::piped())
-        .spawn()?;
-    let stdout = child.stdout.take().expect("failed to get child output");
-    let mut reader = BufReader::new(stdout).lines();
+        let mut count = 0;
+        while let Some(line) = reader.next_line().await? {
+            println!("collector: {}", line);
+            // inner.logs.push(line);
+            count += 1;
+            let _ = sender.send(count);
+        }
 
-    while let Some(line) = reader.next_line().await? {
-        println!("collector: {}", line);
-        inner.logs.push(line);
-        let _ = inner.channel.0.send(inner.logs.len());
+        Ok(())
     }
-
-    Ok(())
 }
 
 impl Stream for LogCollector {
     type Item = (usize, usize);
 
     fn poll_next(
-        self: std::pin::Pin<&mut Self>,
+        mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Self::Item>> {
         println!("collector: poll_next: enter");
-        let mut inner = self.inner.lock().unwrap();
-
-        println!("collector: poll_next: locked");
-        let len = inner.logs.len();
-        let diff = len - inner.marker;
+        let diff = self.count - self.marker;
         if diff == 0 {
-            let receiver = inner.channel.1.clone();
-            std::mem::drop(inner);
-
+            let receiver = self.channel.1.clone();
             let waker = cx.waker().clone();
             thread::spawn(move || {
                 if let Ok(count) = receiver.recv() {
@@ -97,11 +79,10 @@ impl Stream for LogCollector {
             println!("collector: poll_next: pending");
             Poll::Pending
         } else {
-            inner.marker = len;
-            std::mem::drop(inner);
+            self.marker = self.count;
 
             println!("collector: poll_next: ready");
-            Poll::Ready(Some((len, diff)))
+            Poll::Ready(Some((self.count, diff)))
         }
     }
 }
