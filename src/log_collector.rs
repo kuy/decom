@@ -25,34 +25,34 @@ impl LogCollector {
     }
 
     pub fn start(&mut self) {
+        // Main: command runner
         let name = self.service_name.clone();
-        let notifier = self.notifier.0.clone();
         let transfer = self.transfer.0.clone();
         thread::spawn(move || {
             println!("collector: logs: spawn");
             let rt = Runtime::new().unwrap();
             rt.block_on(async {
                 println!("collector: logs: block_on");
-                LogCollector::logs(name, notifier, transfer).await;
+                LogCollector::logs(name, transfer).await;
             });
         });
+
+        // Sub: storing logs
         let logs = self.logs.clone();
+        let notifier = self.notifier.0.clone();
         let transfer = self.transfer.1.clone();
         thread::spawn(move || {
             println!("collector: collector: spawn");
             while let Ok(line) = transfer.recv() {
-                let mut store = logs.lock().expect("failed to lock");
+                let mut logs = logs.lock().expect("failed to lock");
                 println!("collector: collector: recv");
-                store.push(line);
+                logs.push(line);
+                notifier.send(logs.len());
             }
         });
     }
 
-    async fn logs(
-        service_name: String,
-        notifier: Sender<usize>,
-        transfer: Sender<String>,
-    ) -> Result<(), Box<dyn Error>> {
+    async fn logs(service_name: String, transfer: Sender<String>) -> Result<(), Box<dyn Error>> {
         let mut child = Command::new("docker")
             .args(&["logs", "-f", service_name.as_str()])
             .stdout(Stdio::piped())
@@ -60,21 +60,17 @@ impl LogCollector {
         let stdout = child.stdout.take().expect("failed to get child output");
         let mut reader = BufReader::new(stdout).lines();
 
-        let mut count = 0;
         while let Some(line) = reader.next_line().await? {
             println!("collector: {}", line);
             transfer.send(line);
-            count += 1;
-            notifier.send(count);
         }
 
         Ok(())
     }
 
     fn len(&self) -> usize {
-        let store = self.logs.lock().expect("failed to lock");
-        let count = store.len();
-        count
+        let logs = self.logs.lock().expect("failed to lock");
+        logs.len()
     }
 }
 
