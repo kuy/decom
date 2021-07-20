@@ -1,6 +1,5 @@
 use futures::StreamExt;
 use std::{error::Error, result::Result};
-use tokio::time::{sleep, Duration};
 
 mod docker;
 mod docker_compose;
@@ -22,11 +21,5 @@ async fn main() -> Result<(), Box<dyn Error>> {
         println!("main: {} [+{}]", total, diff);
     }
 
-    loop {
-        println!("main: loop");
-        sleep(Duration::from_secs(60)).await;
-    }
-
-    // docker::logs("periodic-output".into()).await?;
     Ok(())
 }
