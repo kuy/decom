@@ -14,6 +14,15 @@ $ cargo install decom
 
 ### Architecture
 
+- decom_core
+- decom_ui_cli
+  - tui-rs
+  - start `flaterm` project using `crossterm`
+- decom_ui_tauri
+  - tauri
+- decom_store_mem
+- decom_store
+
 Use multi-process model.
 
 ```
