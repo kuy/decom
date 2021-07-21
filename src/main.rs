@@ -1,4 +1,4 @@
-use futures::StreamExt;
+use futures::{stream, StreamExt};
 use std::{error::Error, result::Result};
 
 mod docker;
@@ -12,15 +12,18 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let services = docker_compose::services().await?;
     println!("main: services: {:?}", services);
 
-    /*
-    let mut collector = LogCollector::new("periodic-output".into());
-    collector.start();
-    println!("main: started");
+    let mut collectors = vec![];
+    services.iter().for_each(|service| {
+        let mut collector = LogCollector::new(&service.container_name);
+        collector.start();
+        collectors.push(collector);
+        println!("main: collector: '{}' started", service.service_name);
+    });
 
-    while let Some((total, diff)) = collector.next().await {
+    let mut collectors = stream::select_all(collectors);
+    while let Some((total, diff)) = collectors.next().await {
         println!("main: {} [+{}]", total, diff);
     }
-    */
 
     Ok(())
 }

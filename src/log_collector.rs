@@ -6,7 +6,7 @@ use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::{process::Command, runtime::Runtime};
 
 pub struct LogCollector {
-    service_name: String,
+    container_name: String,
     marker: usize,
     notifier: (Sender<usize>, Receiver<usize>),
     transfer: (Sender<String>, Receiver<String>),
@@ -14,9 +14,9 @@ pub struct LogCollector {
 }
 
 impl LogCollector {
-    pub fn new(service_name: String) -> Self {
+    pub fn new(container_name: &str) -> Self {
         LogCollector {
-            service_name,
+            container_name: container_name.to_string(),
             marker: 0,
             notifier: channel::unbounded(),
             transfer: channel::unbounded(),
@@ -26,7 +26,7 @@ impl LogCollector {
 
     pub fn start(&mut self) {
         // Main: command runner
-        let name = self.service_name.clone();
+        let name = self.container_name.clone();
         let transfer = self.transfer.0.clone();
         thread::spawn(move || {
             println!("collector: logs: spawn");
@@ -52,9 +52,9 @@ impl LogCollector {
         });
     }
 
-    async fn logs(service_name: String, transfer: Sender<String>) -> Result<(), Box<dyn Error>> {
+    async fn logs(container_name: String, transfer: Sender<String>) -> Result<(), Box<dyn Error>> {
         let mut child = Command::new("docker")
-            .args(&["logs", "-f", service_name.as_str()])
+            .args(&["logs", "-f", container_name.as_str()])
             .stdout(Stdio::piped())
             .spawn()?;
         let stdout = child.stdout.take().expect("failed to get child output");
