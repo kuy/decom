@@ -3,9 +3,15 @@ use std::{collections::HashMap, error::Error, process::Stdio, result::Result, st
 use tokio::process::Command;
 use tokio_util::codec::{FramedRead, LinesCodec};
 
-pub async fn names(container_ids: Vec<String>) -> Result<HashMap<String, String>, Box<dyn Error>> {
+#[derive(Debug, PartialEq)]
+pub struct Container {
+    pub id: String,
+    pub name: String,
+}
+
+pub async fn names(container_ids: Vec<String>) -> Result<Vec<Container>, Box<dyn Error>> {
     let output = Command::new("docker")
-        .args(&["ps", "--format", "{{.ID}},{{.Names}}", "--no-trunc"])
+        .args(&["ps", "-a", "--format", "{{.ID}},{{.Names}}", "--no-trunc"])
         .output()
         .await?;
     let output = str::from_utf8(output.stdout.as_slice())?;
@@ -24,11 +30,14 @@ fn parse_ps_result(output: &str) -> HashMap<String, String> {
         .collect()
 }
 
-fn map_id_and_name(ids: Vec<String>, dict: HashMap<String, String>) -> HashMap<String, String> {
+fn map_id_and_name(ids: Vec<String>, dict: HashMap<String, String>) -> Vec<Container> {
     ids.into_iter()
         .map(|id| (id.clone(), dict.get(&id)))
         .filter_map(|(id, name)| match name {
-            Some(name) => Some((id, name.clone())),
+            Some(name) => Some(Container {
+                id,
+                name: name.clone(),
+            }),
             _ => None,
         })
         .collect()
@@ -93,15 +102,16 @@ mod tests {
             "environments_coconut-api_1".into(),
         );
 
-        let mut expected: HashMap<String, String> = HashMap::new();
-        expected.insert(
-            "7d7b045685ce0704de380ad30424cdcdde79448c6b78e967f69997db69678fc4".into(),
-            "environments_apple_1".into(),
-        );
-        expected.insert(
-            "2e5aeea126fe2ce71c65501f428a2880664cd001fd6ec84cae688cec45a57794".into(),
-            "environments_coconut-api_1".into(),
-        );
+        let expected: Vec<Container> = vec![
+            Container {
+                id: "7d7b045685ce0704de380ad30424cdcdde79448c6b78e967f69997db69678fc4".into(),
+                name: "environments_apple_1".into(),
+            },
+            Container {
+                id: "2e5aeea126fe2ce71c65501f428a2880664cd001fd6ec84cae688cec45a57794".into(),
+                name: "environments_coconut-api_1".into(),
+            },
+        ];
         assert_eq!(map_id_and_name(ids, dict), expected);
     }
 }
