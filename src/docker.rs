@@ -1,7 +1,5 @@
-use futures::prelude::*;
-use std::{collections::HashMap, error::Error, process::Stdio, result::Result, str};
+use std::{collections::HashMap, error::Error, result::Result, str};
 use tokio::process::Command;
-use tokio_util::codec::{FramedRead, LinesCodec};
 
 #[derive(Debug, PartialEq)]
 pub struct Container {
@@ -41,20 +39,6 @@ fn map_id_and_name(ids: Vec<String>, dict: HashMap<String, String>) -> Vec<Conta
             _ => None,
         })
         .collect()
-}
-
-pub async fn logs(container_id: String) -> Result<(), Box<dyn Error>> {
-    let mut child = Command::new("docker")
-        .args(&["logs", "-f", container_id.as_str()])
-        .stdout(Stdio::piped())
-        .kill_on_drop(true)
-        .spawn()?;
-    let stdout = child.stdout.take().expect("child output");
-    let mut reader = FramedRead::new(stdout, LinesCodec::new());
-    while let Some(line) = reader.next().await {
-        println!("{}", line?);
-    }
-    Ok(())
 }
 
 #[cfg(test)]
