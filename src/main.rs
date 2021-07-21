@@ -13,16 +13,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
     println!("main: services: {:?}", services);
 
     let mut collectors = vec![];
-    services.iter().for_each(|service| {
-        let mut collector = LogCollector::new(&service.container_name);
+    services.iter().for_each(|s| {
+        let mut collector = LogCollector::new(&s.service_name, &s.container_name);
         collector.start();
         collectors.push(collector);
-        println!("main: collector: '{}' started", service.service_name);
+        println!("main: collector: '{}' started", s.service_name);
     });
 
     let mut collectors = stream::select_all(collectors);
-    while let Some((total, diff)) = collectors.next().await {
-        println!("main: {} [+{}]", total, diff);
+    while let Some((service_name, total, diff)) = collectors.next().await {
+        println!("main: {}: {} [+{}]", service_name, total, diff);
     }
 
     Ok(())

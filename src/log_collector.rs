@@ -6,6 +6,7 @@ use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::{process::Command, runtime::Runtime};
 
 pub struct LogCollector {
+    service_name: String,
     container_name: String,
     marker: usize,
     notifier: (Sender<usize>, Receiver<usize>),
@@ -14,8 +15,9 @@ pub struct LogCollector {
 }
 
 impl LogCollector {
-    pub fn new(container_name: &str) -> Self {
+    pub fn new(service_name: &str, container_name: &str) -> Self {
         LogCollector {
+            service_name: service_name.to_string(),
             container_name: container_name.to_string(),
             marker: 0,
             notifier: channel::unbounded(),
@@ -52,6 +54,7 @@ impl LogCollector {
         });
     }
 
+    // TODO: No need to use async with tokio's Command. Use Command in standard library.
     async fn logs(container_name: String, transfer: Sender<String>) -> Result<(), Box<dyn Error>> {
         let mut child = Command::new("docker")
             .args(&["logs", "-f", container_name.as_str()])
@@ -75,7 +78,7 @@ impl LogCollector {
 }
 
 impl Stream for LogCollector {
-    type Item = (usize, usize);
+    type Item = (String, usize, usize);
 
     fn poll_next(
         mut self: std::pin::Pin<&mut Self>,
@@ -103,7 +106,7 @@ impl Stream for LogCollector {
             self.marker = count;
 
             println!("collector: poll_next: ready");
-            Poll::Ready(Some((count, diff)))
+            Poll::Ready(Some((self.service_name.clone(), count, diff)))
         }
     }
 }
