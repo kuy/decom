@@ -31,10 +31,10 @@ impl LogCollector {
         let name = self.container_name.clone();
         let transfer = self.transfer.0.clone();
         thread::spawn(move || {
-            println!("collector: logs: spawn");
+            // println!("collector: logs: spawn");
             let rt = Runtime::new().unwrap();
             rt.block_on(async {
-                println!("collector: logs: block_on");
+                // println!("collector: logs: block_on");
                 LogCollector::logs(name, transfer).await;
             });
         });
@@ -44,10 +44,10 @@ impl LogCollector {
         let notifier = self.notifier.0.clone();
         let transfer = self.transfer.1.clone();
         thread::spawn(move || {
-            println!("collector: collector: spawn");
+            // println!("collector: collector: spawn");
             while let Ok(line) = transfer.recv() {
                 let mut logs = logs.lock().expect("failed to lock");
-                println!("collector: collector: recv");
+                // println!("collector: collector: recv");
                 logs.push(line);
                 notifier.send(logs.len());
             }
@@ -64,7 +64,7 @@ impl LogCollector {
         let mut reader = BufReader::new(stdout).lines();
 
         while let Some(line) = reader.next_line().await? {
-            println!("collector: {}", line);
+            // println!("collector: {}", line);
             transfer.send(line);
         }
 
@@ -75,6 +75,17 @@ impl LogCollector {
         let logs = self.logs.lock().expect("failed to lock");
         logs.len()
     }
+
+    // TODO: Don't copy string, return reference
+    pub fn slice(&self) -> Vec<String> {
+        let logs = self.logs.lock().expect("failed to lock");
+        logs.iter()
+            .rev()
+            .take(10)
+            .map(|line| line.clone())
+            .rev()
+            .collect()
+    }
 }
 
 impl Stream for LogCollector {
@@ -84,7 +95,7 @@ impl Stream for LogCollector {
         mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Self::Item>> {
-        println!("collector: poll_next: enter");
+        // println!("collector: poll_next: enter");
         let count = self.len();
         let diff = count - self.marker;
         if diff == 0 {
@@ -92,20 +103,20 @@ impl Stream for LogCollector {
             let waker = cx.waker().clone();
             thread::spawn(move || {
                 if let Ok(count) = receiver.recv() {
-                    println!("collector: poll_next: recv lines={}", count);
+                    // println!("collector: poll_next: recv lines={}", count);
                 } else {
-                    println!("collector: poll_next: failed");
+                    // println!("collector: poll_next: failed");
                 }
-                println!("collector: poll_next: wake");
+                // println!("collector: poll_next: wake");
                 waker.wake();
             });
 
-            println!("collector: poll_next: pending");
+            // println!("collector: poll_next: pending");
             Poll::Pending
         } else {
             self.marker = count;
 
-            println!("collector: poll_next: ready");
+            // println!("collector: poll_next: ready");
             Poll::Ready(Some((self.service_name.clone(), count, diff)))
         }
     }
