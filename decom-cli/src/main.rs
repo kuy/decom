@@ -3,7 +3,8 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use futures::{stream, StreamExt};
+// use futures::{stream, StreamExt};
+use decom_core::{docker_compose, LogCollector};
 use std::{
     error::Error,
     io,
@@ -18,12 +19,6 @@ use tui::{
     widgets::{Block, Borders, Paragraph, Wrap},
     Terminal,
 };
-
-mod docker;
-mod docker_compose;
-mod log_collector;
-
-use log_collector::LogCollector;
 
 enum Event<I> {
     Input(I),
@@ -86,7 +81,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut current = 0;
 
     loop {
-        terminal.draw(|f| {
+        let _ = terminal.draw(|f| {
             let service = services.get(current as usize).unwrap();
             let size = f.size();
             let block = Block::default()

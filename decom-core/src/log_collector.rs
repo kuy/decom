@@ -35,7 +35,7 @@ impl LogCollector {
             let rt = Runtime::new().unwrap();
             rt.block_on(async {
                 // println!("collector: logs: block_on");
-                LogCollector::logs(name, transfer).await;
+                let _ = LogCollector::logs(name, transfer).await;
             });
         });
 
@@ -49,7 +49,7 @@ impl LogCollector {
                 let mut logs = logs.lock().expect("failed to lock");
                 // println!("collector: collector: recv");
                 logs.push(line);
-                notifier.send(logs.len());
+                let _ = notifier.send(logs.len());
             }
         });
     }
@@ -65,7 +65,7 @@ impl LogCollector {
 
         while let Some(line) = reader.next_line().await? {
             // println!("collector: {}", line);
-            transfer.send(line);
+            let _ = transfer.send(line);
         }
 
         Ok(())
@@ -102,7 +102,7 @@ impl Stream for LogCollector {
             let receiver = self.notifier.1.clone();
             let waker = cx.waker().clone();
             thread::spawn(move || {
-                if let Ok(count) = receiver.recv() {
+                if let Ok(_count) = receiver.recv() {
                     // println!("collector: poll_next: recv lines={}", count);
                 } else {
                     // println!("collector: poll_next: failed");

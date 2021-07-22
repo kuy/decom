@@ -12,6 +12,11 @@ $ cargo install decom
 
 ## Development
 
+### TODOs
+
+- Command-line options
+- Storage to handle massive logs
+
 ### Architecture
 
 - decom_core
