@@ -1,7 +1,7 @@
 use boolinator::Boolinator;
 use proc_macro::TokenStream;
-use proc_macro2::{TokenStream as TokenStream2, TokenTree};
-use quote::{quote_spanned, ToTokens};
+use proc_macro2::{Ident, Span, TokenStream as TokenStream2, TokenTree};
+use quote::{quote, quote_spanned, ToTokens};
 use syn::{
     buffer::Cursor,
     parse::{Parse, ParseStream, Parser},
@@ -107,9 +107,15 @@ impl Parse for LayoutItem {
 impl ToTokens for LayoutItem {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let Self { ty, children } = self;
-        tokens.extend(quote_spanned! { ty.span() => {
-            #ty::new()
-        } });
+        let item_ident = Ident::new("__flaterm_item", Span::call_site());
+        let children_token_stream = children.to_token_stream();
+        tokens.extend(quote! {
+            {
+                let #item_ident = #ty::new();
+                #children_token_stream;
+                #item_ident
+            }
+        });
     }
 }
 
@@ -198,7 +204,22 @@ struct LayoutChildren(Vec<LayoutNode>);
 
 impl ToTokens for LayoutChildren {
     fn to_tokens(&self, tokens: &mut TokenStream2) {
-        todo!()
+        let Self(children) = self;
+        if children.is_empty() {
+            return; // nothing to extend
+        }
+
+        let vec_ident = Ident::new("__flaterm_vec", Span::call_site());
+        let push_children_streams = children.iter().map(|child| {
+            quote_spanned! {
+                child.span()=> #vec_ident.push(::std::convert::Into::into(#child));
+            }
+        });
+        tokens.extend(quote! {
+            let mut #vec_ident: ::std::vec::Vec<Block> = ::std::vec::Vec::new();
+            #(#push_children_streams)*
+            #vec_ident
+        });
     }
 }
 

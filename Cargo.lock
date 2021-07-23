@@ -191,9 +191,18 @@ name = "flaterm-macro"
 version = "0.0.0"
 dependencies = [
  "boolinator",
+ "flaterm",
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "flaterm-test"
+version = "0.0.0"
+dependencies = [
+ "flaterm",
+ "flaterm-macro",
 ]
 
 [[package]]
