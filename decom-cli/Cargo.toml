@@ -1,6 +1,9 @@
 [package]
 name = "decom-cli"
 version = "0.0.0"
+authors = ["Yuki Kodama<endflow.net@gmail.com>"]
+repository = "https://github.com/kuy/decom"
+homepage = "https://github.com/kuy/decom"
 edition = "2018"
 
 [dependencies]
