@@ -16,4 +16,10 @@ fn test_layout_macro() {
     layout! {
         <Block />
     };
+    layout! {
+        <Block>
+            <Block></Block>
+            <Block />
+        </Block>
+    };
 }

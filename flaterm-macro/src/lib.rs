@@ -1,57 +1,154 @@
+use boolinator::Boolinator;
 use proc_macro::TokenStream;
 use proc_macro2::{TokenStream as TokenStream2, TokenTree};
 use quote::{quote_spanned, ToTokens};
-use syn::parse_macro_input;
 use syn::{
+    buffer::Cursor,
     parse::{Parse, ParseStream, Parser},
+    parse_macro_input,
+    punctuated::Punctuated,
     spanned::Spanned,
-    Token, Type,
+    token::Colon2,
+    Path, PathArguments, PathSegment, Token, Type, TypePath,
 };
+
+/// ref. https://github.com/yewstack/yew/tree/master/packages/yew-macro
 
 #[proc_macro]
 pub fn layout(input: TokenStream) -> TokenStream {
-    let root = parse_macro_input!(input as LayoutComponent);
+    let root = parse_macro_input!(input as LayoutNode);
     TokenStream::from(root.into_token_stream())
 }
 
-struct LayoutComponent {
-    ty: Type,
+trait PeekValue<T> {
+    fn peek(cursor: Cursor) -> Option<T>;
 }
 
-impl Parse for LayoutComponent {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
-        let open = input.parse::<LayoutComponentOpen>()?;
-        if open.is_self_closing() {
-            return Ok(Self { ty: open.ty });
+enum NodeType {
+    Item,
+    Empty,
+}
+
+enum LayoutNode {
+    Item(Box<LayoutItem>),
+    Empty,
+}
+
+impl LayoutNode {
+    fn peek_node_type(input: ParseStream) -> Option<NodeType> {
+        let input = input.fork();
+        if input.is_empty() {
+            Some(NodeType::Empty)
+        } else if input.peek(Token![<]) {
+            Some(NodeType::Item)
+        } else {
+            None
         }
-
-        input.parse::<LayoutComponentClose>()?;
-
-        Ok(Self { ty: open.ty })
     }
 }
 
-impl ToTokens for LayoutComponent {
+impl Parse for LayoutNode {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let layout_node = match Self::peek_node_type(input) {
+            Some(NodeType::Item) => LayoutNode::Item(Box::new(input.parse()?)),
+            Some(NodeType::Empty) => LayoutNode::Empty,
+            None => {
+                return Err(input.error("unexpected node"));
+            }
+        };
+        Ok(layout_node)
+    }
+}
+
+impl ToTokens for LayoutNode {
+    fn to_tokens(&self, tokens: &mut TokenStream2) {
+        match self {
+            LayoutNode::Item(item) => item.to_tokens(tokens),
+            _ => (),
+        }
+    }
+}
+
+struct LayoutItem {
+    ty: Type,
+    children: LayoutChildren,
+}
+
+impl Parse for LayoutItem {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let open = input.parse::<LayoutItemOpen>()?;
+        if open.is_self_closing() {
+            return Ok(Self {
+                ty: open.ty,
+                children: LayoutChildren(vec![]),
+            });
+        }
+
+        let mut children: Vec<LayoutNode> = vec![];
+        loop {
+            if let Some(ty) = LayoutItemClose::peek(input.cursor()) {
+                if open.ty == ty {
+                    break;
+                }
+            }
+
+            children.push(input.parse()?);
+        }
+
+        input.parse::<LayoutItemClose>()?;
+
+        Ok(Self {
+            ty: open.ty,
+            children: LayoutChildren(children),
+        })
+    }
+}
+
+impl ToTokens for LayoutItem {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        let Self { ty } = self;
+        let Self { ty, children } = self;
         tokens.extend(quote_spanned! { ty.span() => {
             #ty::new()
         } });
     }
 }
 
-struct LayoutComponentOpen {
+impl LayoutItem {
+    fn peek_type(mut cursor: Cursor) -> (Type, Cursor) {
+        let mut segments: Punctuated<PathSegment, Colon2> = Punctuated::new();
+        let leading_colon = None;
+        if let Some((ident, c)) = cursor.ident() {
+            cursor = c;
+            segments.push(PathSegment {
+                ident,
+                arguments: PathArguments::None,
+            });
+        }
+        (
+            Type::Path(TypePath {
+                qself: None,
+                path: Path {
+                    leading_colon,
+                    segments,
+                },
+            }),
+            cursor,
+        )
+    }
+}
+
+struct LayoutItemOpen {
     tag: TagTokens,
     ty: Type,
 }
 
-impl LayoutComponentOpen {
+impl LayoutItemOpen {
     fn is_self_closing(&self) -> bool {
         self.tag.div.is_some()
     }
 }
 
-impl Parse for LayoutComponentOpen {
+impl Parse for LayoutItemOpen {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let (tag, content) = TagTokens::parse_start_tag(input)?;
         let content_parser = |input: ParseStream| {
@@ -63,12 +160,12 @@ impl Parse for LayoutComponentOpen {
     }
 }
 
-struct LayoutComponentClose {
+struct LayoutItemClose {
     tag: TagTokens,
     _ty: Type,
 }
 
-impl Parse for LayoutComponentClose {
+impl Parse for LayoutItemClose {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let (tag, content) = TagTokens::parse_end_tag(input)?;
         let content_parser = |input: ParseStream| {
@@ -80,12 +177,35 @@ impl Parse for LayoutComponentClose {
     }
 }
 
-/// ref. yew-macro
-/// https://github.com/yewstack/yew/blob/b3ed684f0b859cf826a398304856574739825666/packages/yew-macro/src/html_tree/tag.rs#L32-L36
+impl PeekValue<Type> for LayoutItemClose {
+    fn peek(cursor: Cursor) -> Option<Type> {
+        let (punct, cursor) = cursor.punct()?;
+        (punct.as_char() == '<').as_option()?;
+
+        let (punct, cursor) = cursor.punct()?;
+        (punct.as_char() == '/').as_option()?;
+
+        let (ty, cursor) = LayoutItem::peek_type(cursor);
+
+        let (punct, _) = cursor.punct()?;
+        (punct.as_char() == '>').as_option()?;
+
+        Some(ty)
+    }
+}
+
+struct LayoutChildren(Vec<LayoutNode>);
+
+impl ToTokens for LayoutChildren {
+    fn to_tokens(&self, tokens: &mut TokenStream2) {
+        todo!()
+    }
+}
+
 struct TagTokens {
-    pub lt: Token![<],
-    pub div: Option<Token![/]>,
-    pub gt: Token![>],
+    lt: Token![<],
+    div: Option<Token![/]>,
+    gt: Token![>],
 }
 
 impl TagTokens {
