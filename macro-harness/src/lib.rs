@@ -49,6 +49,8 @@ fn inner_run(path: impl AsRef<Path>) -> Result<()> {
     let output = cargo_expand(&temp_manifest_path)?;
     let actual = String::from_utf8(output.stdout)?;
 
+    // TODO: cleanup temp dir
+
     if expected == actual {
         println!(
             "{} {}",
