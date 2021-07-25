@@ -237,14 +237,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "flaterm-test"
-version = "0.0.0"
-dependencies = [
- "flaterm",
- "flaterm-macro",
-]
-
-[[package]]
 name = "futures"
 version = "0.3.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
