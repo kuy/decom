@@ -22,7 +22,7 @@ pub fn run(path: impl AsRef<Path>) {
 
     let path = path.as_ref().to_owned();
     std::panic::catch_unwind(|| {
-        // ???: Suppress returned Result<T> because raise errors by panic!()
+        // TODO: Collect unknown errors and report
         inner_run(path).unwrap();
     })
     .unwrap_or_else(|_cause| {
@@ -35,8 +35,6 @@ fn inner_run(path: impl AsRef<Path>) -> Result<()> {
     let context = Context {
         project_dir: project_dir()?,
     };
-
-    // println!("{}", style(format!("macro-harness: {:?}", path)).dim());
 
     let source_path = context.project_dir.join(path);
     let stdout_path = to_stdout_path(&source_path);
@@ -51,11 +49,15 @@ fn inner_run(path: impl AsRef<Path>) -> Result<()> {
     let output = cargo_expand(&temp_manifest_path)?;
     let actual = String::from_utf8(output.stdout)?;
 
-    let count = print_diff(&expected, &actual);
-    if count == 0 {
-        println!("{}", style("Pass").green());
+    if expected == actual {
+        println!(
+            "{} {}",
+            style("Pass:").green(),
+            style(format!("{:?}", source_path.as_path())).dim()
+        );
     } else {
-        println!("{}", style("Failed").red());
+        println!("{} {:?}", style("Failed:").red(), source_path.as_path());
+        print_diff(&expected, &actual);
         panic!();
     }
 
@@ -64,7 +66,6 @@ fn inner_run(path: impl AsRef<Path>) -> Result<()> {
 
 fn cargo_expand(manifest_path: impl AsRef<Path>) -> Result<Output> {
     let manifest_path = manifest_path.as_ref().to_owned();
-    // println!("{}",style(format!("cargo expand: {:?}", manifest_path)).dim());
     let output = Command::new("cargo")
         .args(&[
             "expand",
@@ -206,9 +207,7 @@ impl fmt::Display for Line {
     }
 }
 
-fn print_diff(expected: &String, actual: &String) -> usize {
-    let mut count = 0;
-
+fn print_diff(expected: &String, actual: &String) {
     let diff = TextDiff::from_lines(expected, actual);
     for (idx, group) in diff.grouped_ops(3).iter().enumerate() {
         if idx > 0 {
@@ -237,12 +236,9 @@ fn print_diff(expected: &String, actual: &String) -> usize {
                 if change.missing_newline() {
                     println!();
                 }
-                count += 1;
             }
         }
     }
-
-    count
 }
 
 #[cfg(test)]
