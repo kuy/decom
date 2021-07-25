@@ -4,33 +4,17 @@ Decompose [`docker-compose`](https://docs.docker.com/compose/reference/) logs an
 
 ## Usage
 
-### WIP: Install
+WIP
 
-```bash
-$ cargo install decom
-```
+## TODOs
 
-## Development
+- [ ] Command-line options
+- [ ] Storage to handle massive logs
 
-### TODOs
+## License
 
-- Command-line options
-- Storage to handle massive logs
+MIT
 
-### Architecture
+## Author
 
-- decom_core
-- decom_ui_cli
-  - tui-rs
-  - start `flaterm` project using `crossterm`
-- decom_ui_tauri
-  - tauri
-- decom_store_mem
-- decom_store
-
-Use multi-process model.
-
-```
-[main (thread)] <-> [tui]
-[log collector (thread)] <-> [docker logs (process)]
-```
+Yuki Kodama / [@kuy](https://twitter.com/kuy)

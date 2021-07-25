@@ -1,3 +1,4 @@
+/// ref. https://github.com/yewstack/yew/tree/master/packages/yew-macro
 use boolinator::Boolinator;
 use proc_macro::TokenStream;
 use proc_macro2::{Ident, Span, TokenStream as TokenStream2, TokenTree};
@@ -7,14 +8,12 @@ use syn::{
     parse::{Parse, ParseStream, Parser},
     parse_macro_input,
     spanned::Spanned,
-    Token,
+    Expr, Token,
 };
-
-/// ref. https://github.com/yewstack/yew/tree/master/packages/yew-macro
 
 #[proc_macro]
 pub fn layout(input: TokenStream) -> TokenStream {
-    let root = parse_macro_input!(input as LayoutNode);
+    let root = parse_macro_input!(input as Node);
     TokenStream::from(root.into_token_stream())
 }
 
@@ -23,33 +22,33 @@ trait PeekValue<T> {
 }
 
 enum NodeType {
-    Item,
+    Layout,
     Empty,
 }
 
-enum LayoutNode {
-    Item(Box<LayoutItem>),
+enum Node {
+    Layout(Box<Layout>),
     Empty,
 }
 
-impl LayoutNode {
+impl Node {
     fn peek_node_type(input: ParseStream) -> Option<NodeType> {
         let input = input.fork();
         if input.is_empty() {
             Some(NodeType::Empty)
         } else if input.peek(Token![<]) {
-            Some(NodeType::Item)
+            Some(NodeType::Layout)
         } else {
             None
         }
     }
 }
 
-impl Parse for LayoutNode {
+impl Parse for Node {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let layout_node = match Self::peek_node_type(input) {
-            Some(NodeType::Item) => LayoutNode::Item(Box::new(input.parse()?)),
-            Some(NodeType::Empty) => LayoutNode::Empty,
+            Some(NodeType::Layout) => Node::Layout(Box::new(input.parse()?)),
+            Some(NodeType::Empty) => Node::Empty,
             None => {
                 return Err(input.error("unexpected node"));
             }
@@ -58,33 +57,35 @@ impl Parse for LayoutNode {
     }
 }
 
-impl ToTokens for LayoutNode {
+impl ToTokens for Node {
     fn to_tokens(&self, tokens: &mut TokenStream2) {
         match self {
-            LayoutNode::Item(item) => item.to_tokens(tokens),
+            Node::Layout(item) => item.to_tokens(tokens),
             _ => (),
         }
     }
 }
 
-struct LayoutItem {
+struct Layout {
     name: Ident,
     children: LayoutChildren,
+    props: Props,
 }
 
-impl Parse for LayoutItem {
+impl Parse for Layout {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        let open = input.parse::<LayoutItemOpen>()?;
+        let open = input.parse::<LayoutOpenTag>()?;
         if open.is_self_closing() {
             return Ok(Self {
                 name: open.name,
                 children: LayoutChildren(vec![]),
+                props: open.props,
             });
         }
 
-        let mut children: Vec<LayoutNode> = vec![];
+        let mut children: Vec<Node> = vec![];
         loop {
-            if let Some(ty) = LayoutItemClose::peek(input.cursor()) {
+            if let Some(ty) = LayoutCloseTag::peek(input.cursor()) {
                 if open.name == ty {
                     break;
                 }
@@ -93,74 +94,87 @@ impl Parse for LayoutItem {
             children.push(input.parse()?);
         }
 
-        input.parse::<LayoutItemClose>()?;
+        input.parse::<LayoutCloseTag>()?;
 
         Ok(Self {
             name: open.name,
             children: LayoutChildren(children),
+            props: open.props,
         })
     }
 }
 
-impl ToTokens for LayoutItem {
+impl ToTokens for Layout {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        let Self { name, children } = self;
+        let Self {
+            name,
+            children,
+            props,
+        } = self;
         let name_str = name.to_string();
-        let item_ident = Ident::new("__flaterm_item", Span::call_site());
-        let children_token_stream = children.to_token_stream();
-        let assign_statement = if children_token_stream.is_empty() {
-            TokenStream2::new()
+        let layout_ident = Ident::new("__flaterm_l", Span::call_site());
+        let props_token_stream = props.to_token_stream();
+        let props_assignment = if props_token_stream.is_empty() {
+            quote!()
         } else {
-            quote! {
-                #item_ident.children = __flaterm_vec;
-            }
+            quote!(#layout_ident.props = __flaterm_p;)
+        };
+        let children_token_stream = children.to_token_stream();
+        let children_assignment = if children_token_stream.is_empty() {
+            quote!()
+        } else {
+            quote!(#layout_ident.children = __flaterm_c;)
         };
         tokens.extend(quote! {
             {
-                let mut #item_ident = ::flaterm::Node::new(::std::string::String::from(#name_str));
-                #children_token_stream;
-                #assign_statement
-                #item_ident
+                let mut #layout_ident = ::flaterm::Node::new(::std::string::String::from(#name_str));
+                #props_token_stream
+                #props_assignment
+                #children_token_stream
+                #children_assignment
+                #layout_ident
             }
         });
     }
 }
 
-impl LayoutItem {
+impl Layout {
     fn peek_name(cursor: Cursor) -> (Ident, Cursor) {
         cursor.ident().unwrap()
     }
 }
 
-struct LayoutItemOpen {
+struct LayoutOpenTag {
     tag: TagTokens,
     name: Ident,
+    props: Props,
 }
 
-impl LayoutItemOpen {
+impl LayoutOpenTag {
     fn is_self_closing(&self) -> bool {
         self.tag.div.is_some()
     }
 }
 
-impl Parse for LayoutItemOpen {
+impl Parse for LayoutOpenTag {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        let (tag, content) = TagTokens::parse_start_tag(input)?;
-        let content_parser = |input: ParseStream| {
+        let (tag, inner_brackets) = TagTokens::parse_start_tag(input)?;
+        let inner_parser = |input: ParseStream| {
             let name = input.parse()?;
-            Ok((name,))
+            let props = input.parse()?;
+            Ok((name, props))
         };
-        let (name,) = content_parser.parse2(content)?;
-        Ok(Self { tag, name })
+        let (name, props) = inner_parser.parse2(inner_brackets)?;
+        Ok(Self { tag, name, props })
     }
 }
 
-struct LayoutItemClose {
-    tag: TagTokens,
+struct LayoutCloseTag {
+    _tag: TagTokens,
     _name: Ident,
 }
 
-impl Parse for LayoutItemClose {
+impl Parse for LayoutCloseTag {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let (tag, content) = TagTokens::parse_end_tag(input)?;
         let content_parser = |input: ParseStream| {
@@ -168,11 +182,14 @@ impl Parse for LayoutItemClose {
             Ok((name,))
         };
         let (name,) = content_parser.parse2(content)?;
-        Ok(Self { tag, _name: name })
+        Ok(Self {
+            _tag: tag,
+            _name: name,
+        })
     }
 }
 
-impl PeekValue<Ident> for LayoutItemClose {
+impl PeekValue<Ident> for LayoutCloseTag {
     fn peek(cursor: Cursor) -> Option<Ident> {
         let (punct, cursor) = cursor.punct()?;
         (punct.as_char() == '<').as_option()?;
@@ -180,7 +197,7 @@ impl PeekValue<Ident> for LayoutItemClose {
         let (punct, cursor) = cursor.punct()?;
         (punct.as_char() == '/').as_option()?;
 
-        let (ty, cursor) = LayoutItem::peek_name(cursor);
+        let (ty, cursor) = Layout::peek_name(cursor);
 
         let (punct, _) = cursor.punct()?;
         (punct.as_char() == '>').as_option()?;
@@ -189,7 +206,7 @@ impl PeekValue<Ident> for LayoutItemClose {
     }
 }
 
-struct LayoutChildren(Vec<LayoutNode>);
+struct LayoutChildren(Vec<Node>);
 
 impl ToTokens for LayoutChildren {
     fn to_tokens(&self, tokens: &mut TokenStream2) {
@@ -198,45 +215,60 @@ impl ToTokens for LayoutChildren {
             return; // nothing to generate
         }
 
-        let vec_ident = Ident::new("__flaterm_vec", Span::call_site());
+        let vec_ident = Ident::new("__flaterm_c", Span::call_site());
         let push_children_streams = children.iter().map(|child| {
             quote_spanned! {
                 child.span()=> #vec_ident.push(::std::convert::Into::into(#child));
             }
         });
+
         tokens.extend(quote! {
-            let mut #vec_ident: ::std::vec::Vec<::flaterm::Node> = ::std::vec::Vec::new();
+            let mut #vec_ident: ::std::vec::Vec<::flaterm::Node> = ::std::default::Default::default();
             #(#push_children_streams)*
         });
     }
 }
 
 struct TagTokens {
-    lt: Token![<],
+    _lt: Token![<],
     div: Option<Token![/]>,
-    gt: Token![>],
+    _gt: Token![>],
 }
 
 impl TagTokens {
     pub fn parse_start_tag(input: ParseStream) -> syn::Result<(Self, TokenStream2)> {
         let lt = input.parse()?;
-        let (content, div, gt) = Self::parse_until_tag_end(input)?;
+        let (inner_brackets, div, gt) = Self::parse_until_end_bracket(input)?;
 
-        Ok((Self { lt, div, gt }, content))
+        Ok((
+            Self {
+                _lt: lt,
+                div,
+                _gt: gt,
+            },
+            inner_brackets,
+        ))
     }
 
     pub fn parse_end_tag(input: ParseStream) -> syn::Result<(Self, TokenStream2)> {
         let lt = input.parse()?;
         let div = Some(input.parse()?);
-        let (content, _end_div, gt) = Self::parse_until_tag_end(input)?;
+        let (inner_brackets, _end_div, gt) = Self::parse_until_end_bracket(input)?;
 
-        Ok((Self { lt, div, gt }, content))
+        Ok((
+            Self {
+                _lt: lt,
+                div,
+                _gt: gt,
+            },
+            inner_brackets,
+        ))
     }
 
-    pub fn parse_until_tag_end(
+    pub fn parse_until_end_bracket(
         input: ParseStream,
     ) -> syn::Result<(TokenStream2, Option<Token![/]>, Token![>])> {
-        let mut content = vec![];
+        let mut inner_brackets = vec![];
         let mut div: Option<Token![/]> = None;
         let gt: Token![>];
 
@@ -261,9 +293,56 @@ impl TagTokens {
                 }
             }
 
-            content.push(next);
+            inner_brackets.push(next);
         }
 
-        Ok((content.into_iter().collect(), div, gt))
+        Ok((inner_brackets.into_iter().collect(), div, gt))
+    }
+}
+
+struct Props(Vec<Prop>);
+
+impl Parse for Props {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let mut props = vec![];
+        while !input.is_empty() {
+            props.push(input.parse()?);
+        }
+        Ok(Self(props))
+    }
+}
+
+impl ToTokens for Props {
+    fn to_tokens(&self, tokens: &mut TokenStream2) {
+        let Self(props) = self;
+        if props.is_empty() {
+            return; // nothing to generate
+        }
+
+        let map_ident = Ident::new("__flaterm_p", Span::call_site());
+        let insert_props_streams = props.iter().map(|prop| {
+            let Prop { key, value } = prop;
+            let key_str = key.to_string();
+            quote!(#map_ident.insert(::std::string::String::from(#key_str), ::std::convert::Into::into(#value));)
+        });
+
+        tokens.extend(quote! {
+            let mut #map_ident: ::std::collections::btree_map::BTreeMap<::std::string::String, ::flaterm::PropValue> = ::std::default::Default::default();
+            #(#insert_props_streams)*
+        });
+    }
+}
+
+struct Prop {
+    key: Ident,
+    value: Expr,
+}
+
+impl Parse for Prop {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let key = input.parse()?;
+        input.parse::<Token![=]>()?;
+        let value = input.parse()?;
+        Ok(Self { key, value })
     }
 }

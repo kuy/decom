@@ -6,7 +6,46 @@ extern crate std;
 use flaterm_macro::layout;
 fn test() {
     {
-        let mut __flaterm_item = ::flaterm::Node::new(::std::string::String::from("Block"));
-        __flaterm_item
+        let mut __flaterm_l = ::flaterm::Node::new(::std::string::String::from("Block"));
+        let mut __flaterm_p: ::std::collections::btree_map::BTreeMap<
+            ::std::string::String,
+            ::flaterm::PropValue,
+        > = ::std::default::Default::default();
+        __flaterm_p.insert(
+            ::std::string::String::from("title"),
+            ::std::convert::Into::into("flaterm-macro Manual"),
+        );
+        __flaterm_l.props = __flaterm_p;
+        __flaterm_l
+    };
+    {
+        let mut __flaterm_l = ::flaterm::Node::new(::std::string::String::from("Block"));
+        let mut __flaterm_p: ::std::collections::btree_map::BTreeMap<
+            ::std::string::String,
+            ::flaterm::PropValue,
+        > = ::std::default::Default::default();
+        __flaterm_p.insert(
+            ::std::string::String::from("title"),
+            ::std::convert::Into::into("flaterm-macro Manual"),
+        );
+        __flaterm_l.props = __flaterm_p;
+        __flaterm_l
+    };
+    {
+        let mut __flaterm_l = ::flaterm::Node::new(::std::string::String::from("Block"));
+        let mut __flaterm_p: ::std::collections::btree_map::BTreeMap<
+            ::std::string::String,
+            ::flaterm::PropValue,
+        > = ::std::default::Default::default();
+        __flaterm_p.insert(
+            ::std::string::String::from("title"),
+            ::std::convert::Into::into("flaterm-macro Manual"),
+        );
+        __flaterm_p.insert(
+            ::std::string::String::from("height"),
+            ::std::convert::Into::into(3),
+        );
+        __flaterm_l.props = __flaterm_p;
+        __flaterm_l
     };
 }

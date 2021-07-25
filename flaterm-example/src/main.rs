@@ -59,8 +59,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     loop {
         let _ = terminal.draw(|f| {
             let layout = layout! {
-                <Block>
-                    <Text />
+                <Block title="flaterm-example">
+                    <Block title="tabs" height=3 />
+                    <Block title="content" />
                 </Block>
             };
             let area = f.size();
