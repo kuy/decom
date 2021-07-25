@@ -6,7 +6,7 @@ use crossterm::{
 use flaterm_macro::layout;
 use std::{
     error::Error,
-    io,
+    io::{self, Stdout},
     result::Result,
     sync::mpsc,
     thread,
@@ -14,9 +14,10 @@ use std::{
 };
 use tui::{
     backend::CrosstermBackend,
+    layout::Rect,
     text::Spans,
     widgets::{Block, Borders, Paragraph, Wrap},
-    Terminal,
+    Frame, Terminal,
 };
 
 enum Event<I> {
@@ -36,7 +37,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     terminal.clear()?;
 
     let (tx, rx) = mpsc::channel();
-    let tick_rate = Duration::from_millis(10000);
+    let tick_rate = Duration::from_millis(1000);
     thread::spawn(move || {
         let mut last_tick = Instant::now();
         loop {
@@ -57,28 +58,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
     });
 
     loop {
-        let _ = terminal.draw(|f| {
-            let size = f.size();
-            let block = Block::default()
-                .title("flaterm-example")
-                .borders(Borders::ALL);
-
-            let text: Vec<Spans> = vec![
-                "The quick brown fox jumps over the lazy dog".into(),
-                "The quick brown fox jumps over the lazy dog".into(),
-                "The quick brown fox jumps over the lazy dog".into(),
-            ];
-            let paragraph = Paragraph::new(text).block(block).wrap(Wrap { trim: true });
-            f.render_widget(paragraph, size);
-        });
-
         terminal.draw(|f| {
             let layout = layout! {
                 <Block>
                     <Text />
                 </Block>
             };
-            println!("{:?}", layout);
+            let area = f.size();
+            render(&layout, f, area);
         });
 
         match rx.recv() {
@@ -96,4 +83,56 @@ async fn main() -> Result<(), Box<dyn Error>> {
     }
 
     Ok(())
+}
+
+// enum Hint {
+//     Consumed(Rect),
+//     Claimed(Rect),
+//     Unknown,
+// }
+
+fn render(node: &flaterm::Node, f: &mut Frame<CrosstermBackend<Stdout>>, area: Rect) -> Rect {
+    let consumed = match node.name.as_str() {
+        "Block" => {
+            let block = Block::default().title("Block").borders(Borders::ALL);
+            f.render_widget(block, area);
+            area
+        }
+        "Text" => {
+            let block = Block::default().title("Text").borders(Borders::ALL);
+            f.render_widget(block, area);
+            area
+        }
+        _ => area,
+    };
+
+    if !node.children.is_empty() {
+        let mut rest = shrink(&consumed);
+        node.children.iter().for_each(|child| {
+            let consumed = render(child, f, rest);
+            rest = consume(&rest, &consumed);
+        });
+    }
+
+    consumed
+}
+
+fn shrink(rect: &Rect) -> Rect {
+    Rect {
+        x: rect.x + 1,
+        y: rect.y + 1,
+        width: rect.width - 2,
+        height: rect.height - 2,
+    }
+}
+
+// TODO: Need 'direction' and 'order' params
+fn consume(area: &Rect, sub: &Rect) -> Rect {
+    // TODO: Need assertions of constraint
+    Rect {
+        x: area.x,
+        y: area.y + sub.height,
+        width: area.width,
+        height: area.height - sub.height,
+    }
 }
