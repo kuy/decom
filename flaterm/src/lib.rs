@@ -20,14 +20,14 @@ impl Text {
 
 #[derive(Debug)]
 pub struct Node {
-    pub ty: String,
+    pub name: String,
     pub children: Vec<Node>,
 }
 
 impl Node {
     pub fn new(ty: String) -> Self {
         Self {
-            ty,
+            name: ty,
             children: vec![],
         }
     }

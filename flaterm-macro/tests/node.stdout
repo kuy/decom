@@ -6,8 +6,13 @@ extern crate std;
 use flaterm_macro::layout;
 fn test_node() {
     {
-        let __flaterm_ty_name = ::std::any::type_name::<Block>();
-        let __flaterm_item = ::flaterm::Node::new(::std::string::String::from(__flaterm_ty_name));
+        let mut __flaterm_item = ::flaterm::Node::new(::std::string::String::from("Block"));
+        let mut __flaterm_vec: ::std::vec::Vec<::flaterm::Node> = ::std::vec::Vec::new();
+        __flaterm_vec.push(::std::convert::Into::into({
+            let mut __flaterm_item = ::flaterm::Node::new(::std::string::String::from("Text"));
+            __flaterm_item
+        }));
+        __flaterm_item.children = __flaterm_vec;
         __flaterm_item
     };
 }

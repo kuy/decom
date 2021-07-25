@@ -70,7 +70,7 @@ impl ToTokens for LayoutNode {
 }
 
 struct LayoutItem {
-    ty: Type,
+    name: Ident,
     children: LayoutChildren,
 }
 
@@ -79,7 +79,7 @@ impl Parse for LayoutItem {
         let open = input.parse::<LayoutItemOpen>()?;
         if open.is_self_closing() {
             return Ok(Self {
-                ty: open.ty,
+                name: open.name,
                 children: LayoutChildren(vec![]),
             });
         }
@@ -87,7 +87,7 @@ impl Parse for LayoutItem {
         let mut children: Vec<LayoutNode> = vec![];
         loop {
             if let Some(ty) = LayoutItemClose::peek(input.cursor()) {
-                if open.ty == ty {
+                if open.name == ty {
                     break;
                 }
             }
@@ -98,7 +98,7 @@ impl Parse for LayoutItem {
         input.parse::<LayoutItemClose>()?;
 
         Ok(Self {
-            ty: open.ty,
+            name: open.name,
             children: LayoutChildren(children),
         })
     }
@@ -106,14 +106,22 @@ impl Parse for LayoutItem {
 
 impl ToTokens for LayoutItem {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        let Self { ty, children } = self;
+        let Self { name, children } = self;
+        let name_str = name.to_string();
         let item_ident = Ident::new("__flaterm_item", Span::call_site());
         let children_token_stream = children.to_token_stream();
+        let assign_statement = if children_token_stream.is_empty() {
+            TokenStream2::new()
+        } else {
+            quote! {
+                #item_ident.children = __flaterm_vec;
+            }
+        };
         tokens.extend(quote! {
             {
-                let __flaterm_ty_name = ::std::any::type_name::<#ty>();
-                let #item_ident = ::flaterm::Node::new(::std::string::String::from(__flaterm_ty_name));
+                let mut #item_ident = ::flaterm::Node::new(::std::string::String::from(#name_str));
                 #children_token_stream;
+                #assign_statement
                 #item_ident
             }
         });
@@ -121,32 +129,14 @@ impl ToTokens for LayoutItem {
 }
 
 impl LayoutItem {
-    fn peek_type(mut cursor: Cursor) -> (Type, Cursor) {
-        let mut segments: Punctuated<PathSegment, Colon2> = Punctuated::new();
-        let leading_colon = None;
-        if let Some((ident, c)) = cursor.ident() {
-            cursor = c;
-            segments.push(PathSegment {
-                ident,
-                arguments: PathArguments::None,
-            });
-        }
-        (
-            Type::Path(TypePath {
-                qself: None,
-                path: Path {
-                    leading_colon,
-                    segments,
-                },
-            }),
-            cursor,
-        )
+    fn peek_name(mut cursor: Cursor) -> (Ident, Cursor) {
+        cursor.ident().unwrap()
     }
 }
 
 struct LayoutItemOpen {
     tag: TagTokens,
-    ty: Type,
+    name: Ident,
 }
 
 impl LayoutItemOpen {
@@ -159,40 +149,40 @@ impl Parse for LayoutItemOpen {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let (tag, content) = TagTokens::parse_start_tag(input)?;
         let content_parser = |input: ParseStream| {
-            let ty = input.parse()?;
-            Ok((ty,))
+            let name = input.parse()?;
+            Ok((name,))
         };
-        let (ty,) = content_parser.parse2(content)?;
-        Ok(Self { tag, ty })
+        let (name,) = content_parser.parse2(content)?;
+        Ok(Self { tag, name })
     }
 }
 
 struct LayoutItemClose {
     tag: TagTokens,
-    _ty: Type,
+    _name: Ident,
 }
 
 impl Parse for LayoutItemClose {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let (tag, content) = TagTokens::parse_end_tag(input)?;
         let content_parser = |input: ParseStream| {
-            let ty = input.parse()?;
-            Ok((ty,))
+            let name = input.parse()?;
+            Ok((name,))
         };
-        let (ty,) = content_parser.parse2(content)?;
-        Ok(Self { tag, _ty: ty })
+        let (name,) = content_parser.parse2(content)?;
+        Ok(Self { tag, _name: name })
     }
 }
 
-impl PeekValue<Type> for LayoutItemClose {
-    fn peek(cursor: Cursor) -> Option<Type> {
+impl PeekValue<Ident> for LayoutItemClose {
+    fn peek(cursor: Cursor) -> Option<Ident> {
         let (punct, cursor) = cursor.punct()?;
         (punct.as_char() == '<').as_option()?;
 
         let (punct, cursor) = cursor.punct()?;
         (punct.as_char() == '/').as_option()?;
 
-        let (ty, cursor) = LayoutItem::peek_type(cursor);
+        let (ty, cursor) = LayoutItem::peek_name(cursor);
 
         let (punct, _) = cursor.punct()?;
         (punct.as_char() == '>').as_option()?;
@@ -207,7 +197,7 @@ impl ToTokens for LayoutChildren {
     fn to_tokens(&self, tokens: &mut TokenStream2) {
         let Self(children) = self;
         if children.is_empty() {
-            return; // nothing to extend
+            return; // nothing to generate
         }
 
         let vec_ident = Ident::new("__flaterm_vec", Span::call_site());
@@ -219,7 +209,6 @@ impl ToTokens for LayoutChildren {
         tokens.extend(quote! {
             let mut #vec_ident: ::std::vec::Vec<::flaterm::Node> = ::std::vec::Vec::new();
             #(#push_children_streams)*
-            #vec_ident
         });
     }
 }

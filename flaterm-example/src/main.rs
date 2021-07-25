@@ -36,7 +36,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     terminal.clear()?;
 
     let (tx, rx) = mpsc::channel();
-    let tick_rate = Duration::from_millis(500);
+    let tick_rate = Duration::from_millis(10000);
     thread::spawn(move || {
         let mut last_tick = Instant::now();
         loop {
@@ -75,9 +75,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
         terminal.draw(|f| {
             let layout = layout! {
                 <Block>
+                    <Text />
                 </Block>
             };
-            eprintln!("{:?}", layout);
+            println!("{:?}", layout);
         });
 
         match rx.recv() {
