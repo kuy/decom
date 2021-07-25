@@ -1,0 +1,17 @@
+#![feature(prelude_import)]
+#[prelude_import]
+use std::prelude::rust_2018::*;
+#[macro_use]
+extern crate std;
+use flaterm::Block;
+use flaterm_macro::layout;
+pub fn test_basic_layout() {
+    {
+        let __flaterm_item = Block::new();
+        __flaterm_item
+    };
+    {
+        let __flaterm_item = Block::new();
+        __flaterm_item
+    };
+}

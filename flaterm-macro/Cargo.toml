@@ -17,3 +17,4 @@ syn = { version = "1.0", features = ["extra-traits"] }
 
 [dev-dependencies]
 flaterm = { path = "../flaterm" }
+macro-harness = { path = "../macro-harness" }
