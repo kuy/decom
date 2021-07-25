@@ -58,7 +58,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     });
 
     loop {
-        terminal.draw(|f| {
+        let _ = terminal.draw(|f| {
             let layout = layout! {
                 <Block>
                     <Text />

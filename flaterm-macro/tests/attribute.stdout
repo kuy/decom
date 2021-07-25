@@ -3,15 +3,10 @@
 use std::prelude::rust_2018::*;
 #[macro_use]
 extern crate std;
-use flaterm::Block;
 use flaterm_macro::layout;
-pub fn test_basic_layout() {
+fn test() {
     {
-        let __flaterm_item = Block::new();
-        __flaterm_item
-    };
-    {
-        let __flaterm_item = Block::new();
+        let mut __flaterm_item = ::flaterm::Node::new(::std::string::String::from("Block"));
         __flaterm_item
     };
 }

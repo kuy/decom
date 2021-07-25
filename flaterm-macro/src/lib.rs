@@ -6,10 +6,8 @@ use syn::{
     buffer::Cursor,
     parse::{Parse, ParseStream, Parser},
     parse_macro_input,
-    punctuated::Punctuated,
     spanned::Spanned,
-    token::Colon2,
-    Path, PathArguments, PathSegment, Token, Type, TypePath,
+    Token,
 };
 
 /// ref. https://github.com/yewstack/yew/tree/master/packages/yew-macro
@@ -129,7 +127,7 @@ impl ToTokens for LayoutItem {
 }
 
 impl LayoutItem {
-    fn peek_name(mut cursor: Cursor) -> (Ident, Cursor) {
+    fn peek_name(cursor: Cursor) -> (Ident, Cursor) {
         cursor.ident().unwrap()
     }
 }
