@@ -1,7 +1,6 @@
-use anyhow::{Error, Result};
+use anyhow::Result;
 use cargo_toml::{self, Dependency, DependencyDetail, Edition, Product};
 use console::{style, Style};
-use rand;
 use similar::{ChangeTag, TextDiff};
 use std::{
     env, fmt,
@@ -10,7 +9,6 @@ use std::{
     path::{Path, PathBuf},
     process::{Command, Output},
 };
-use toml;
 
 struct Context {
     project_dir: PathBuf,
@@ -42,7 +40,9 @@ fn inner_run(path: impl AsRef<Path>) -> Result<()> {
 
     let template_path = source_path
         .parent()
-        .ok_or(Error::msg("failed to traverse parent dir"))?
+        .unwrap_or_else(|| {
+            panic!("Failed to traverse parent dir");
+        })
         .join("Cargo.toml.template");
     let (temp_manifest_path, _) = prepare_manifest_file(&template_path, &source_path)?;
 
@@ -101,9 +101,12 @@ fn to_stdout_path(path: &PathBuf) -> PathBuf {
 }
 
 fn project_dir() -> Result<PathBuf> {
-    env::var_os("CARGO_MANIFEST_DIR")
+    let dir = env::var_os("CARGO_MANIFEST_DIR")
         .map(PathBuf::from)
-        .ok_or(Error::msg("failed to get source dir"))
+        .unwrap_or_else(|| {
+            panic!("Failed to get manifest dir");
+        });
+    Ok(dir)
 }
 
 fn create_temp_dir() -> PathBuf {
@@ -131,7 +134,7 @@ fn prepare_manifest_file(
     let content = fs::read_to_string(&template_path)?;
     let mut manifest = cargo_toml::Manifest::from_slice(content.as_bytes()).unwrap_or_else(|err| {
         panic!(
-            "Failed load manifest: {:?}\n  Error: {:?}",
+            "Failed to load manifest: {:?}\n  Error: {:?}",
             template_path.as_ref(),
             err
         );
@@ -149,14 +152,14 @@ fn prepare_manifest_file(
                     let crate_dir = canonicalize_path(&manifest_dir, &rel_path);
                     let detail = DependencyDetail {
                         path: Some(String::from(crate_dir.to_str().unwrap())),
-                        ..detail.clone()
+                        ..detail
                     };
                     (crate_name, Dependency::Detailed(detail))
                 } else {
-                    (crate_name, dep.clone())
+                    (crate_name, dep)
                 }
             }
-            _ => (crate_name, dep.clone()),
+            _ => (crate_name, dep),
         })
         .collect();
 
@@ -169,11 +172,11 @@ fn prepare_manifest_file(
 
     // Write out manifest
     let content = toml::to_string(&manifest).unwrap_or_else(|err| {
-        panic!("Failed serialize manifest\n  Error: {:?}", err);
+        panic!("Failed to serialize manifest\n  Error: {:?}", err);
     });
     let mut temp_manifest = File::create(&temp_manifest_path).unwrap_or_else(|err| {
         panic!(
-            "Failed create manifest file: {:?}\n  Error: {:?}",
+            "Failed to create manifest file: {:?}\n  Error: {:?}",
             temp_manifest_path, err
         );
     });
@@ -207,7 +210,7 @@ impl fmt::Display for Line {
     }
 }
 
-fn print_diff(expected: &String, actual: &String) {
+fn print_diff(expected: &str, actual: &str) {
     let diff = TextDiff::from_lines(expected, actual);
     for (idx, group) in diff.grouped_ops(3).iter().enumerate() {
         if idx > 0 {
