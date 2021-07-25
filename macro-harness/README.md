@@ -8,7 +8,7 @@ WIP
 
 ## Example
 
-[flaterm-macro](#)
+See [`tests`](https://github.com/kuy/decom/tree/main/flaterm-macro/tests) in [flaterm-macro](https://github.com/kuy/decom/tree/main/flaterm-macro).
 
 ## TODOs
 
