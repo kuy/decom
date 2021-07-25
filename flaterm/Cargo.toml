@@ -7,4 +7,3 @@ homepage = "https://github.com/kuy/decom"
 edition = "2018"
 
 [dependencies]
-crossterm = "0.20.0"
