@@ -1,0 +1,14 @@
+[package]
+name = "flaterm-example"
+version = "0.0.0"
+authors = ["Yuki Kodama<endflow.net@gmail.com>"]
+repository = "https://github.com/kuy/decom"
+homepage = "https://github.com/kuy/decom"
+edition = "2018"
+
+[dependencies]
+crossterm = "0.20.0"
+flaterm = { path = "../flaterm" }
+flaterm-macro = { path = "../flaterm-macro" }
+tokio = { version = "1.8.2", features = ["full"] }
+tui = { version = "0.15.0", default-features = false, features = ["crossterm"] }

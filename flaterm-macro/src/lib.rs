@@ -111,7 +111,8 @@ impl ToTokens for LayoutItem {
         let children_token_stream = children.to_token_stream();
         tokens.extend(quote! {
             {
-                let #item_ident = #ty::new();
+                let __flaterm_ty_name = ::std::any::type_name::<#ty>();
+                let #item_ident = ::flaterm::Node::new(::std::string::String::from(__flaterm_ty_name));
                 #children_token_stream;
                 #item_ident
             }
@@ -216,7 +217,7 @@ impl ToTokens for LayoutChildren {
             }
         });
         tokens.extend(quote! {
-            let mut #vec_ident: ::std::vec::Vec<Block> = ::std::vec::Vec::new();
+            let mut #vec_ident: ::std::vec::Vec<::flaterm::Node> = ::std::vec::Vec::new();
             #(#push_children_streams)*
             #vec_ident
         });

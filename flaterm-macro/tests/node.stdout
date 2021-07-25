@@ -1,0 +1,13 @@
+#![feature(prelude_import)]
+#[prelude_import]
+use std::prelude::rust_2018::*;
+#[macro_use]
+extern crate std;
+use flaterm_macro::layout;
+fn test_node() {
+    {
+        let __flaterm_ty_name = ::std::any::type_name::<Block>();
+        let __flaterm_item = ::flaterm::Node::new(::std::string::String::from(__flaterm_ty_name));
+        __flaterm_item
+    };
+}
