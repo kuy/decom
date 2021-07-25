@@ -14,6 +14,7 @@ See [`tests`](https://github.com/kuy/decom/tree/main/flaterm-macro/tests) in [fl
 
 - [ ] Implement `MACRO_HARNESS=overwrite` feature
 - [ ] Refactoring: split to modules
+- [ ] Rename `Cargo.toml.template` to `Cargo.template.toml` for syntax highlighting
 - [ ] Stop using `panic!()` on everything
 - [ ] Improve printing result
 - [ ] Documentation
