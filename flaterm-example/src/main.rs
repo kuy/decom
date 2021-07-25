@@ -15,8 +15,7 @@ use std::{
 use tui::{
     backend::CrosstermBackend,
     layout::Rect,
-    text::Spans,
-    widgets::{Block, Borders, Paragraph, Wrap},
+    widgets::{Block, Borders},
     Frame, Terminal,
 };
 
