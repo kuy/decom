@@ -1,4 +1,4 @@
-use crate::Node;
+use crate::{Node, PropValue};
 use std::io::Stdout;
 use tui::{
     backend::CrosstermBackend,
@@ -16,12 +16,8 @@ use tui::{
 pub fn render(node: &Node, f: &mut Frame<CrosstermBackend<Stdout>>, area: Rect) -> Rect {
     let consumed = match node.name.as_str() {
         "Block" => {
-            let block = Block::default().title("Block").borders(Borders::ALL);
-            f.render_widget(block, area);
-            area
-        }
-        "Text" => {
-            let block = Block::default().title("Text").borders(Borders::ALL);
+            let title_value = title(&node);
+            let block = Block::default().title(title_value).borders(Borders::ALL);
             f.render_widget(block, area);
             area
         }
@@ -57,4 +53,17 @@ fn consume(area: &Rect, sub: &Rect) -> Rect {
         width: area.width,
         height: area.height - sub.height,
     }
+}
+
+fn title(node: &Node) -> String {
+    node.props
+        .iter()
+        .find_map(|(key, prop)| {
+            if let (PropValue::LiteralString(str), true) = (prop, key.as_str() == "title") {
+                Some(str.clone())
+            } else {
+                None
+            }
+        })
+        .unwrap_or_default()
 }

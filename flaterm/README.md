@@ -4,10 +4,11 @@ Terminal UI toolkit with Minimal design.
 
 ## Usage
 
+![usage](./assets/usage.png)
+
 ```rust
 let layout = layout! {
     <Block title="flaterm-example">
-        <Block title="tabs" height=3 />
         <Block title="content" />
     </Block>
 };
