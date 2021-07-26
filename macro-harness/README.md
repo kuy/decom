@@ -12,7 +12,6 @@ See [`tests`](https://github.com/kuy/decom/tree/main/flaterm-macro/tests) in [fl
 
 ## TODOs
 
-- [ ] Implement `MACRO_HARNESS=overwrite` feature
 - [ ] Support glob match
 - [ ] Stop using `panic!()` on everything
 - [ ] Improve printing result

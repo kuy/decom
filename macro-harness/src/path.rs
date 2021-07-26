@@ -4,8 +4,8 @@ use std::{
     path::{Path, PathBuf},
 };
 
-pub fn with_extension(path: &PathBuf, ext: &str) -> PathBuf {
-    let mut path = path.clone();
+pub fn with_extension(path: &Path, ext: &str) -> PathBuf {
+    let mut path = path.to_path_buf();
     path.set_extension(ext);
     path
 }
