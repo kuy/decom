@@ -13,6 +13,8 @@ See [`tests`](https://github.com/kuy/decom/tree/main/flaterm-macro/tests) in [fl
 ## TODOs
 
 - [ ] Implement `MACRO_HARNESS=overwrite` feature
+- [ ] Support glob match
+- [ ] No need to weap with function in test files
 - [ ] Refactoring: split to modules
 - [ ] Rename `Cargo.toml.template` to `Cargo.template.toml` for syntax highlighting
 - [ ] Stop using `panic!()` on everything
