@@ -5,6 +5,7 @@ fn test() {
     layout! {
         <Block title="flaterm-macro Manual"></Block>
     };
+
     layout! {
         <Block title="flaterm-macro Manual" />
     };
