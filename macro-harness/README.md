@@ -23,7 +23,7 @@ futures = "1"
 my-lunatic-dep = { path = "../../my-lunatic-dep" }
 ```
 
-### 2. Put a pair of source file (`.rs`) and output file (`.stdout`) in `tests` directory
+### 2. Put a pair of source and output files in `tests` directory
 
 `test_nodes.rs`
 

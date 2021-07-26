@@ -29,6 +29,14 @@ flaterm::render(&layout, f, area);
 - `tui` (default)
 - `flat` (under development)
 
+## TODOs
+
+- [ ] Basic flexbox layout
+- [ ] Log widget
+- [ ] Tab widget
+- [ ] Create `flat` theme
+- [ ] CI (github actions)
+
 ## License
 
 MIT
