@@ -8,8 +8,6 @@ mod node;
 mod props;
 mod tag;
 
-// ref. https://github.com/yewstack/yew/tree/master/packages/yew-macro
-
 #[proc_macro]
 pub fn layout(input: TokenStream) -> TokenStream {
     let root = parse_macro_input!(input as node::Node);
