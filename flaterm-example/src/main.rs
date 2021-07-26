@@ -6,18 +6,13 @@ use crossterm::{
 use flaterm_macro::layout;
 use std::{
     error::Error,
-    io::{self, Stdout},
+    io,
     result::Result,
     sync::mpsc,
     thread,
     time::{Duration, Instant},
 };
-use tui::{
-    backend::CrosstermBackend,
-    layout::Rect,
-    widgets::{Block, Borders},
-    Frame, Terminal,
-};
+use tui::{backend::CrosstermBackend, Terminal};
 
 enum Event<I> {
     Input(I),
@@ -65,74 +60,21 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 </Block>
             };
             let area = f.size();
-            render(&layout, f, area);
+            flaterm::render(&layout, f, area);
         });
 
         match rx.recv() {
-            Ok(Event::Input(event)) => match event.code {
-                KeyCode::Char('q') => {
-                    disable_raw_mode();
-                    execute!(terminal.backend_mut(), LeaveAlternateScreen);
-                    terminal.show_cursor();
+            Ok(Event::Input(event)) => {
+                if let KeyCode::Char('q') = event.code {
+                    disable_raw_mode()?;
+                    execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
+                    terminal.show_cursor()?;
                     break;
                 }
-                _ => {}
-            },
+            }
             _ => (),
         }
     }
 
     Ok(())
-}
-
-// enum Hint {
-//     Consumed(Rect),
-//     Claimed(Rect),
-//     Unknown,
-// }
-
-fn render(node: &flaterm::Node, f: &mut Frame<CrosstermBackend<Stdout>>, area: Rect) -> Rect {
-    let consumed = match node.name.as_str() {
-        "Block" => {
-            let block = Block::default().title("Block").borders(Borders::ALL);
-            f.render_widget(block, area);
-            area
-        }
-        "Text" => {
-            let block = Block::default().title("Text").borders(Borders::ALL);
-            f.render_widget(block, area);
-            area
-        }
-        _ => area,
-    };
-
-    if !node.children.is_empty() {
-        let mut rest = shrink(&consumed);
-        node.children.iter().for_each(|child| {
-            let consumed = render(child, f, rest);
-            rest = consume(&rest, &consumed);
-        });
-    }
-
-    consumed
-}
-
-fn shrink(rect: &Rect) -> Rect {
-    Rect {
-        x: rect.x + 1,
-        y: rect.y + 1,
-        width: rect.width - 2,
-        height: rect.height - 2,
-    }
-}
-
-// TODO: Need 'direction' and 'order' params
-fn consume(area: &Rect, sub: &Rect) -> Rect {
-    // TODO: Need assertions of constraint
-    Rect {
-        x: area.x,
-        y: area.y + sub.height,
-        width: area.width,
-        height: area.height - sub.height,
-    }
 }

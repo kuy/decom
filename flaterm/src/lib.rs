@@ -1,5 +1,8 @@
 use std::collections::BTreeMap;
 
+mod renderer;
+pub use renderer::render;
+
 #[derive(Debug, Default)]
 pub struct Node {
     pub name: String,
