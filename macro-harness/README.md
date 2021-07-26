@@ -1,6 +1,7 @@
-# macro-harness
-
-Test harness for Rust's [procedural macros](https://doc.rust-lang.org/reference/procedural-macros.html).
+<h1 align="center">macro-harness</h1>
+<p align="center">
+  <b>Test harness for <a href="https://doc.rust-lang.org/reference/procedural-macros.html">Rust's procedural macros</a></b>
+</p>
 
 ![screen](./assets/screen.gif)
 
