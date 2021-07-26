@@ -91,6 +91,10 @@ Here is a structure of an example project.
    └── test.rs
 ```
 
+### 5. Use `MACRO_HARNESS=overwrite` environment variable to update `.stdout` files
+
+`MACRO_HARNESS=overwrite cargo test`
+
 ## Example
 
 See [`tests`](https://github.com/kuy/decom/tree/main/flaterm-macro/tests) in [flaterm-macro](https://github.com/kuy/decom/tree/main/flaterm-macro).
