@@ -45,12 +45,20 @@ pub fn canonicalize(base_path: impl AsRef<Path>, rel_path: impl AsRef<Path>) -> 
     })
 }
 
+pub fn to_string(path: impl AsRef<Path>) -> String {
+    path.as_ref()
+        .to_path_buf()
+        .into_os_string()
+        .into_string()
+        .unwrap()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn test_to_stdout_path() {
+    fn test_with_extension() {
         assert_eq!(
             with_extension(&PathBuf::from("tests/ui/test_foo_bar.rb"), "stdout"),
             PathBuf::from("tests/ui/test_foo_bar.stdout")

@@ -1,6 +1,6 @@
 use flaterm_macro::layout;
 
-fn test() {
+pub fn test() {
     layout! {
         <Block>
             <Text />

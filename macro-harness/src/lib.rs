@@ -1,6 +1,11 @@
 use anyhow::Result;
 use console::style;
-use std::path::{Path, PathBuf};
+use std::{
+    fs::OpenOptions,
+    io::Write,
+    panic,
+    path::{Path, PathBuf},
+};
 
 mod cargo;
 mod diff;
@@ -14,27 +19,29 @@ struct Context {
 
 pub fn run(path: impl AsRef<Path>) {
     // Suppress stack backtrace output
-    std::panic::set_hook(Box::new(|_| {}));
+    panic::set_hook(Box::new(|_| {}));
 
     let path = path.as_ref().to_owned();
-    std::panic::catch_unwind(|| {
+    let overwrite = std::env::var("MACRO_HARNESS")
+        .map(|value| value.to_lowercase() == "overwrite")
+        .unwrap_or(false);
+    panic::catch_unwind(|| {
         // TODO: Collect unknown errors and report
-        inner_run(path).unwrap();
+        inner_run(path, overwrite).unwrap();
     })
     .unwrap_or_else(|_cause| {
         panic!("Failed");
     })
 }
 
-fn inner_run(path: impl AsRef<Path>) -> Result<()> {
-    let path = path.as_ref().to_owned();
+fn inner_run(path: PathBuf, overwrite: bool) -> Result<()> {
     let context = Context {
         project_dir: path::project_dir()?,
     };
 
     let source_path = context.project_dir.join(path);
     let stdout_path = path::with_extension(&source_path, "stdout");
-    let expected = helper::read_expected(stdout_path)?;
+    let expected = helper::read_expected(&stdout_path)?;
 
     let template_path = source_path
         .parent()
@@ -53,11 +60,36 @@ fn inner_run(path: impl AsRef<Path>) -> Result<()> {
         println!(
             "{} {}",
             style("Pass:").green(),
-            style(format!("{:?}", source_path.as_path())).dim()
+            style(path::to_string(source_path)).dim()
         );
     } else {
-        println!("{} {:?}", style("Failed:").red(), source_path.as_path());
+        println!(
+            "{} {}",
+            style("Failed:").red(),
+            path::to_string(source_path)
+        );
         diff::print(&expected, &actual);
+
+        if overwrite {
+            let stdout_path = path::to_string(stdout_path);
+            let msg = format!("Failed to open stdout file: {}", stdout_path);
+            let mut stdout_file = OpenOptions::new()
+                .write(true)
+                .truncate(true)
+                .open(&stdout_path)
+                .unwrap_or_else(|err| {
+                    panic!("{}\n  {:?}", msg, err);
+                });
+            stdout_file.write_all(actual.as_bytes())?;
+            stdout_file.flush()?;
+
+            println!(
+                "{} {}",
+                style("└ Overwritten:").yellow(),
+                style(stdout_path).dim()
+            );
+        }
+
         panic!();
     }
 

@@ -4,7 +4,7 @@ use std::prelude::rust_2018::*;
 #[macro_use]
 extern crate std;
 use flaterm_macro::layout;
-fn test() {
+pub fn test() {
     {
         let mut __flaterm_l = ::flaterm::Node::new(::std::string::String::from("Block"));
         let mut __flaterm_c: ::std::vec::Vec<::flaterm::Node> = ::std::default::Default::default();
