@@ -2,6 +2,8 @@
 
 Test harness for Rust's [procedural macros](https://doc.rust-lang.org/reference/procedural-macros.html).
 
+![screen](./assets/screen.gif)
+
 ## Usage
 
 WIP
