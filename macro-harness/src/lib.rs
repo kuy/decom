@@ -41,7 +41,7 @@ fn inner_run(path: impl AsRef<Path>) -> Result<()> {
         .unwrap_or_else(|| {
             panic!("Failed to traverse parent dir");
         })
-        .join("Cargo.toml.template");
+        .join("Cargo.template.toml");
     let (temp_manifest_path, _) = manifest::prepare_manifest_file(&template_path, &source_path)?;
 
     let output = cargo::expand(&temp_manifest_path)?;
