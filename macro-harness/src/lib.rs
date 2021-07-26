@@ -85,7 +85,7 @@ fn inner_run(path: PathBuf, overwrite: bool) -> Result<()> {
 
             println!(
                 "{} {}",
-                style("└ Overwritten:").yellow(),
+                style("└ Updated:").yellow(),
                 style(stdout_path).dim()
             );
         }
