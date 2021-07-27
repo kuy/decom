@@ -33,9 +33,10 @@ flaterm::render(&layout, f, area);
 
 ## TODOs
 
-- [ ] Basic flexbox layout
-- [ ] Log widget
-- [ ] Tab widget
+- [ ] Support layout direction
+- [ ] Widgets
+  - [ ] Log
+  - [ ] Tab
 - [ ] Create `flat` theme
 - [ ] CI (github actions)
 
