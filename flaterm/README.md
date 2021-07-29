@@ -33,7 +33,8 @@ flaterm::render(&layout, f, area);
 
 ## TODOs
 
-- [ ] Support layout direction
+- [ ] Support border configuration
+- [ ] Support boolean props
 - [ ] Widgets
   - [ ] Log
   - [ ] Tab

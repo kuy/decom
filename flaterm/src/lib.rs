@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 
 mod renderer;
+
 pub use renderer::render;
 
 #[derive(Clone, Debug, Default)]
@@ -15,6 +16,28 @@ impl Node {
         Self {
             name,
             ..Default::default()
+        }
+    }
+}
+
+#[derive(PartialEq)]
+pub enum Direction {
+    Column,
+    Row,
+}
+
+impl Default for Direction {
+    fn default() -> Self {
+        Direction::Row
+    }
+}
+
+impl From<String> for Direction {
+    fn from(value: String) -> Self {
+        match value.as_str() {
+            "column" => Direction::Column,
+            "row" => Direction::Row,
+            _ => panic!("Invalid direction value: {}", value),
         }
     }
 }
@@ -61,6 +84,16 @@ impl From<PropValue> for u16 {
             num as u16
         } else {
             panic!("Failed to convert {:?} to u16", prop_value);
+        }
+    }
+}
+
+impl From<PropValue> for Direction {
+    fn from(prop_value: PropValue) -> Self {
+        if let PropValue::LiteralString(str) = prop_value {
+            str.into()
+        } else {
+            panic!("Failed to convert {:?} to Direction", prop_value);
         }
     }
 }

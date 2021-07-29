@@ -1,4 +1,4 @@
-use crate::{Node, PropValue};
+use crate::{Direction, Node, PropValue};
 use std::io::Stdout;
 use tui::{
     backend::CrosstermBackend,
@@ -53,17 +53,6 @@ fn shrink(rect: &Rect) -> Rect {
     }
 }
 
-// TODO: Need 'direction' and 'order' params
-fn consume(area: &Rect, sub: &Rect) -> Rect {
-    // TODO: Need assertions of constraint
-    Rect {
-        x: area.x,
-        y: area.y + sub.height,
-        width: area.width,
-        height: area.height - sub.height,
-    }
-}
-
 fn prop_value<T>(node: &Node, prop_key: &str) -> Option<T>
 where
     T: From<PropValue>,
@@ -78,31 +67,65 @@ where
 }
 
 struct LayoutPlanner {
+    direction: Direction,
     claims: Vec<(Node, SizeClaim)>,
 }
 
 impl LayoutPlanner {
     pub fn new() -> Self {
-        Self { claims: vec![] }
+        Self {
+            direction: Default::default(),
+            claims: vec![],
+        }
     }
 
     pub fn analyze(&mut self, node: &Node, area: Rect) -> Vec<(Node, Rect)> {
+        if let Some(dir) = prop_value::<Direction>(node, "direction") {
+            self.direction = dir;
+        }
+
         node.children.iter().for_each(|child| {
             self.claims.push((child.clone(), claim(child)));
         });
+
         self.plan(&area)
+    }
+
+    fn norm(&self, area: &Rect) -> u16 {
+        match self.direction {
+            Direction::Column => area.width,
+            Direction::Row => area.height,
+        }
+    }
+
+    // TODO: Need assertions of constraint
+    fn consume(&self, area: &Rect, sub: &Rect) -> Rect {
+        match self.direction {
+            Direction::Column => Rect {
+                x: area.x + sub.width,
+                y: area.y,
+                width: area.width - sub.width,
+                height: area.height,
+            },
+            Direction::Row => Rect {
+                x: area.x,
+                y: area.y + sub.height,
+                width: area.width,
+                height: area.height - sub.height,
+            },
+        }
     }
 
     fn plan(&self, area: &Rect) -> Vec<(Node, Rect)> {
         let mut ret = Vec::new();
 
-        let mut num_of_fill = self.claims.len() as u16;
+        let mut num_of_fills = self.claims.len() as u16;
         let total = self
             .claims
             .iter()
             .filter_map(|(_, claim)| {
                 if let SizeClaim::Fixed(n) = claim {
-                    num_of_fill -= 1;
+                    num_of_fills -= 1;
                     Some(n)
                 } else {
                     None
@@ -110,41 +133,75 @@ impl LayoutPlanner {
             })
             .fold(0, |acc, n| acc + n);
 
-        assert!(
-            total <= area.height,
-            "total {} <= area.height {}",
-            total,
-            area.height
-        );
+        if self.direction == Direction::Row {
+            assert!(
+                total <= area.height,
+                "total {} <= area.height {}",
+                total,
+                area.height
+            );
+        } else {
+            assert!(
+                total <= area.width,
+                "total {} <= area.width {}",
+                total,
+                area.width
+            );
+        }
 
-        let remained_height = area.height - total;
-        // let rem = remained_height % num_of_fill;
-        let base = remained_height / num_of_fill;
+        let remained_norm = self.norm(area) - total;
+        // TODO: let rem = remained_norm % num_of_fill;
+        let base = remained_norm / num_of_fills;
 
         let mut rest = area.clone();
         self.claims.iter().for_each(|(node, claim)| {
-            let rect = match claim {
-                SizeClaim::Fixed(n) => {
-                    let will_consume = Rect {
-                        x: rest.x,
-                        y: rest.y,
-                        height: n.clone(),
-                        width: rest.width,
-                    };
-                    rest = consume(&rest, &will_consume);
-                    will_consume
-                }
-                SizeClaim::Fill => {
-                    let will_consume = Rect {
-                        x: rest.x,
-                        y: rest.y,
-                        height: base,
-                        width: rest.width,
-                    };
-                    rest = consume(&rest, &will_consume);
-                    will_consume
-                }
+            let rect = match self.direction {
+                Direction::Column => match claim {
+                    SizeClaim::Fixed(n) => {
+                        let will_consume = Rect {
+                            x: rest.x,
+                            y: rest.y,
+                            height: rest.height,
+                            width: n.clone(),
+                        };
+                        rest = self.consume(&rest, &will_consume);
+                        will_consume
+                    }
+                    SizeClaim::Fill => {
+                        let will_consume = Rect {
+                            x: rest.x,
+                            y: rest.y,
+                            height: rest.height,
+                            width: base,
+                        };
+                        rest = self.consume(&rest, &will_consume);
+                        will_consume
+                    }
+                },
+                Direction::Row => match claim {
+                    SizeClaim::Fixed(n) => {
+                        let will_consume = Rect {
+                            x: rest.x,
+                            y: rest.y,
+                            height: n.clone(),
+                            width: rest.width,
+                        };
+                        rest = self.consume(&rest, &will_consume);
+                        will_consume
+                    }
+                    SizeClaim::Fill => {
+                        let will_consume = Rect {
+                            x: rest.x,
+                            y: rest.y,
+                            height: base,
+                            width: rest.width,
+                        };
+                        rest = self.consume(&rest, &will_consume);
+                        will_consume
+                    }
+                },
             };
+
             ret.push((node.clone(), rect));
         });
 
@@ -155,6 +212,8 @@ impl LayoutPlanner {
 fn claim(node: &Node) -> SizeClaim {
     if let Some(height) = prop_value(node, "height") {
         SizeClaim::Fixed(height)
+    } else if let Some(width) = prop_value(node, "width") {
+        SizeClaim::Fixed(width)
     } else {
         SizeClaim::Fill
     }
