@@ -9,8 +9,10 @@ Terminal UI toolkit with Minimal design.
 ```rust
 let layout = layout! {
     <Block title="flaterm-example">
-        <Block title="header" height=6 />
-        <Block title="content" />
+        <Block direction="column">
+            <Block title="list" width=20 />
+            <Block />
+        </Block>
         <Block title="footer" height=3 />
     </Block>
 };
