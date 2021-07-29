@@ -62,8 +62,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     <Block title="footer" height=3 />
                 </Block>
             };
-            let area = f.size();
-            flaterm::render(&layout, f, area);
+            // let area = f.size();
+            flaterm::render(&layout);
         });
 
         match rx.recv() {
