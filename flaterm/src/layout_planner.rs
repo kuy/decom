@@ -12,19 +12,13 @@ impl Default for SizeClaim {
     }
 }
 
+#[derive(Default)]
 pub struct LayoutPlanner {
     direction: Direction,
     claims: Vec<(Node, SizeClaim)>,
 }
 
 impl LayoutPlanner {
-    pub fn new() -> Self {
-        Self {
-            direction: Default::default(),
-            claims: vec![],
-        }
-    }
-
     pub fn analyze(&mut self, node: &Node, area: Rect) -> Vec<(Node, Rect)> {
         if let Some(dir) = node.prop::<Direction>("direction") {
             self.direction = dir;

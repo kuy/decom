@@ -40,6 +40,7 @@ flaterm::render(&layout, f, area);
 - [ ] Widgets
   - [ ] Log
   - [ ] Tab
+  - [ ] List
 - [ ] Create `flat` theme
 - [ ] CI (github actions)
 

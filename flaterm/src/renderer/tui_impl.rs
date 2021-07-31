@@ -23,7 +23,7 @@ pub fn render(node: &Node, f: &mut Frame<CrosstermBackend<Stdout>>, area: Rect) 
     if !node.children.is_empty() {
         let rest = shrink(&consumed);
 
-        let mut planner = LayoutPlanner::new();
+        let mut planner = LayoutPlanner::default();
         let plan = planner.analyze(node, rest.into());
 
         plan.into_iter().for_each(|(child, sub)| {
