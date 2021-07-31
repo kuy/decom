@@ -1,21 +1,21 @@
 use crate::{Direction, Node, Rect};
 
 #[derive(Debug)]
-pub enum SizeClaim {
+pub enum NormClaim {
     Fixed(u16),
     Fill,
 }
 
-impl Default for SizeClaim {
+impl Default for NormClaim {
     fn default() -> Self {
-        SizeClaim::Fill
+        NormClaim::Fill
     }
 }
 
 #[derive(Default)]
 pub struct LayoutPlanner {
     direction: Direction,
-    claims: Vec<(Node, SizeClaim)>,
+    claims: Vec<(Node, NormClaim)>,
 }
 
 impl LayoutPlanner {
@@ -64,7 +64,7 @@ impl LayoutPlanner {
             .claims
             .iter()
             .filter_map(|(_, claim)| {
-                if let SizeClaim::Fixed(n) = claim {
+                if let NormClaim::Fixed(n) = claim {
                     num_of_fills -= 1;
                     Some(n)
                 } else {
@@ -87,7 +87,7 @@ impl LayoutPlanner {
         self.claims.iter().for_each(|(node, claim)| {
             let rect = match self.direction {
                 Direction::Column => match claim {
-                    SizeClaim::Fixed(n) => {
+                    NormClaim::Fixed(n) => {
                         let will_consume = Rect {
                             x: rest.x,
                             y: rest.y,
@@ -97,7 +97,7 @@ impl LayoutPlanner {
                         rest = self.consume(&rest, &will_consume);
                         will_consume
                     }
-                    SizeClaim::Fill => {
+                    NormClaim::Fill => {
                         let will_consume = Rect {
                             x: rest.x,
                             y: rest.y,
@@ -109,7 +109,7 @@ impl LayoutPlanner {
                     }
                 },
                 Direction::Row => match claim {
-                    SizeClaim::Fixed(n) => {
+                    NormClaim::Fixed(n) => {
                         let will_consume = Rect {
                             x: rest.x,
                             y: rest.y,
@@ -119,7 +119,7 @@ impl LayoutPlanner {
                         rest = self.consume(&rest, &will_consume);
                         will_consume
                     }
-                    SizeClaim::Fill => {
+                    NormClaim::Fill => {
                         let will_consume = Rect {
                             x: rest.x,
                             y: rest.y,
@@ -139,12 +139,12 @@ impl LayoutPlanner {
     }
 }
 
-fn claim(node: &Node) -> SizeClaim {
+fn claim(node: &Node) -> NormClaim {
     if let Some(height) = node.prop("height") {
-        SizeClaim::Fixed(height)
+        NormClaim::Fixed(height)
     } else if let Some(width) = node.prop("width") {
-        SizeClaim::Fixed(width)
+        NormClaim::Fixed(width)
     } else {
-        SizeClaim::Fill
+        NormClaim::Fill
     }
 }
