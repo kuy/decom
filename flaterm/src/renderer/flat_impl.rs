@@ -1,5 +1,4 @@
 use crate::Node;
-
 use crossterm::{
     cursor, queue,
     style::{self, Stylize},
