@@ -1,6 +1,6 @@
 use crate::PropValue;
 
-#[derive(PartialEq)]
+#[derive(Clone, PartialEq)]
 pub enum Direction {
     Column,
     Row,

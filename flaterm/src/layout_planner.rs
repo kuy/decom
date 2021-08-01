@@ -14,7 +14,7 @@ impl Default for NormClaim {
 
 #[derive(Default)]
 pub struct LayoutPlanner {
-    direction: Direction,
+    pub direction: Direction,
     claims: Vec<(Node, NormClaim)>,
 }
 

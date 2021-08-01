@@ -8,20 +8,19 @@ use tui::{
 };
 
 pub fn render(node: &Node, f: &mut Frame<CrosstermBackend<Stdout>>, area: Rect) {
-    let consumed = match node.name.as_str() {
+    match node.name.as_str() {
         "Block" => {
             let mut block = Block::default().borders(Borders::ALL);
             if let Some(title) = node.prop::<String>("title") {
                 block = block.title(title);
             }
             f.render_widget(block, area);
-            area
         }
-        _ => area,
-    };
+        _ => (),
+    }
 
     if !node.children.is_empty() {
-        let rest = shrink(&consumed);
+        let rest = shrink(&area);
 
         let mut planner = LayoutPlanner::default();
         let plan = planner.analyze(node, rest.into());
