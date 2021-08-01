@@ -4,7 +4,10 @@ use crossterm::{
     style::{self},
     terminal,
 };
-use std::io::{stdout, Stdout};
+use std::{
+    fmt::Display,
+    io::{stdout, Stdout},
+};
 
 pub struct Context {
     area: Rect,
@@ -32,6 +35,10 @@ pub fn render(node: &Node, context: Option<Context>) {
                             draw_horizontal(&mut stdout, area.y + area.h, area.x, area.x + area.w)
                         }
                     }
+                }
+
+                if let Some(title) = node.prop::<String>("title") {
+                    draw_text(&mut stdout, area.x, area.y, title);
                 }
             }
         }
@@ -64,12 +71,17 @@ pub fn render(node: &Node, context: Option<Context>) {
 
 fn draw_horizontal(out: &mut Stdout, y: u16, x1: u16, x2: u16) {
     for x in x1..x2 {
-        queue!(out, cursor::MoveTo(x, y), style::Print("-"));
+        queue!(out, cursor::MoveTo(x, y), style::Print("─"));
     }
 }
 
 fn draw_vertical(out: &mut Stdout, x: u16, y1: u16, y2: u16) {
     for y in y1..y2 {
-        queue!(out, cursor::MoveTo(x, y), style::Print("|"));
+        queue!(out, cursor::MoveTo(x, y), style::Print("│"));
     }
+}
+
+// TODO: add 'align' param
+fn draw_text(out: &mut Stdout, x: u16, y: u16, text: impl Display) {
+    queue!(out, cursor::MoveTo(x, y), style::Print(text));
 }
