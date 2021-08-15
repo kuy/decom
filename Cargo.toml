@@ -1,2 +1,2 @@
 [workspace]
-members = ["decom-cli", "decom-core", "flaterm", "flaterm-macro", "macro-harness", "flaterm-example"]
+members = ["decom-cli", "decom-core", "flaterm", "flaterm-macro", "flaterm-example"]
