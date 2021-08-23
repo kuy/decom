@@ -7,7 +7,7 @@ homepage = "https://github.com/kuy/decom"
 edition = "2018"
 
 [dependencies]
-crossterm = "0.20.0"
+crossterm = "0.21.0"
 flaterm = { path = "../flaterm" }
 flaterm-macro = { path = "../flaterm-macro" }
 tokio = { version = "1.10.0", features = ["full"] }
