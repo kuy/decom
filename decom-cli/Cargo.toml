@@ -12,5 +12,5 @@ crossterm = "0.21.0"
 decom-core = { path = "../decom-core" }
 futures = "0.3.17"
 tokio = { version = "1.11.0", features = ["full"] }
-tokio-util = { version = "0.6.7", features = ["codec"] }
+tokio-util = { version = "0.6.8", features = ["codec"] }
 tui = { version = "0.16.0", default-features = false, features = ["crossterm"] }
