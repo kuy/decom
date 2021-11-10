@@ -10,5 +10,5 @@ edition = "2018"
 crossterm = "0.22.1"
 flaterm = { path = "../flaterm" }
 flaterm-macro = { path = "../flaterm-macro" }
-tokio = { version = "1.12.0", features = ["full"] }
+tokio = { version = "1.13.0", features = ["full"] }
 tui = { version = "0.16.0", default-features = false, features = ["crossterm"] }
