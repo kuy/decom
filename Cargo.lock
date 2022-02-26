@@ -156,15 +156,15 @@ dependencies = [
 
 [[package]]
 name = "crossterm"
-version = "0.22.1"
+version = "0.23.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c85525306c4291d1b73ce93c8acf9c339f9b213aef6c1d85c3830cbf1c16325c"
+checksum = "77b75a27dc8d220f1f8521ea69cd55a34d720a200ebb3a624d9aa19193d3b432"
 dependencies = [
  "bitflags",
  "crossterm_winapi 0.9.0",
  "libc",
  "mio 0.7.14",
- "parking_lot 0.11.2",
+ "parking_lot 0.12.0",
  "signal-hook",
  "signal-hook-mio",
  "winapi",
@@ -193,7 +193,7 @@ name = "decom-cli"
 version = "0.0.0"
 dependencies = [
  "crossbeam",
- "crossterm 0.22.1",
+ "crossterm 0.23.0",
  "decom-core",
  "futures",
  "tokio",
@@ -221,7 +221,7 @@ checksum = "a357d28ed41a50f9c765dbfe56cbc04a64e53e5fc58ba79fbc34c10ef3df831f"
 name = "flaterm"
 version = "0.0.0"
 dependencies = [
- "crossterm 0.22.1",
+ "crossterm 0.23.0",
  "tui",
 ]
 
@@ -229,7 +229,7 @@ dependencies = [
 name = "flaterm-example"
 version = "0.0.0"
 dependencies = [
- "crossterm 0.22.1",
+ "crossterm 0.23.0",
  "flaterm",
  "flaterm-macro",
  "tokio",
@@ -657,9 +657,9 @@ dependencies = [
 
 [[package]]
 name = "signal-hook"
-version = "0.3.10"
+version = "0.3.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c98891d737e271a2954825ef19e46bd16bdb98e2746f2eec4f7a4ef7946efd1"
+checksum = "647c97df271007dcea485bb74ffdb57f2e683f1306c854f468a0c244badabf2d"
 dependencies = [
  "libc",
  "signal-hook-registry",
