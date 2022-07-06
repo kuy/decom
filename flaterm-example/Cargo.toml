@@ -11,4 +11,4 @@ crossterm = "0.23.2"
 flaterm = { path = "../flaterm" }
 flaterm-macro = { path = "../flaterm-macro" }
 tokio = { version = "1.19.2", features = ["full"] }
-tui = { version = "0.16.0", default-features = false, features = ["crossterm"] }
+tui = { version = "0.18.0", default-features = false, features = ["crossterm"] }
