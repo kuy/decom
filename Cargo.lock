@@ -281,7 +281,7 @@ dependencies = [
  "macro-harness",
  "proc-macro2",
  "quote",
- "syn 1.0.80",
+ "syn 2.0.22",
 ]
 
 [[package]]
