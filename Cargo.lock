@@ -192,9 +192,9 @@ dependencies = [
 
 [[package]]
 name = "crossterm"
-version = "0.23.2"
+version = "0.26.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a2102ea4f781910f8a5b98dd061f4c2023f479ce7bb1236330099ceb5a93cf17"
+checksum = "a84cda67535339806297f1b331d6dd6320470d2a0fe65381e79ee9e156dd3d13"
 dependencies = [
  "bitflags",
  "crossterm_winapi 0.9.0",
@@ -229,7 +229,7 @@ name = "decom-cli"
 version = "0.0.0"
 dependencies = [
  "crossbeam",
- "crossterm 0.23.2",
+ "crossterm 0.26.1",
  "decom-core",
  "futures",
  "tokio",
@@ -257,7 +257,7 @@ checksum = "a357d28ed41a50f9c765dbfe56cbc04a64e53e5fc58ba79fbc34c10ef3df831f"
 name = "flaterm"
 version = "0.0.0"
 dependencies = [
- "crossterm 0.23.2",
+ "crossterm 0.26.1",
  "tui",
 ]
 
@@ -265,7 +265,7 @@ dependencies = [
 name = "flaterm-example"
 version = "0.0.0"
 dependencies = [
- "crossterm 0.23.2",
+ "crossterm 0.26.1",
  "flaterm",
  "flaterm-macro",
  "tokio",
