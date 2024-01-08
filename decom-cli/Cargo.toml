@@ -7,7 +7,7 @@ homepage = "https://github.com/kuy/decom"
 edition = "2018"
 
 [dependencies]
-crossbeam = "0.8.3"
+crossbeam = "0.8.4"
 crossterm = "0.26.1"
 decom-core = { path = "../decom-core" }
 futures = "0.3.30"
