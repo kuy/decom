@@ -12,7 +12,7 @@ proc-macro = true
 [dependencies]
 boolinator = "2.4.0"
 proc-macro2 = "1.0"
-quote = "1.0"
+quote = "1.0.36"
 syn = { version = "1.0", features = ["extra-traits"] }
 
 [dev-dependencies]
